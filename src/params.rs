@@ -18,7 +18,7 @@ impl FromPyObject<'_, '_> for Params {
         }
 
         // Try to extract as a sequence
-        let seq = ob.downcast::<pyo3::types::PySequence>()?;
+        let seq = ob.cast::<pyo3::types::PySequence>()?;
         let len = seq.len()?;
         let mut values = Vec::with_capacity(len);
 

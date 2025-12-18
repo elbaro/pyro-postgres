@@ -171,7 +171,7 @@ impl Opts {
 }
 
 /// Helper to convert either a String URL or Opts object to zero_postgres::Opts
-pub fn resolve_opts(py: Python<'_>, url_or_opts: &Bound<'_, PyAny>) -> PyroResult<zero_postgres::Opts> {
+pub fn resolve_opts(_py: Python<'_>, url_or_opts: &Bound<'_, PyAny>) -> PyroResult<zero_postgres::Opts> {
     // Try to extract as string first
     if let Ok(url) = url_or_opts.extract::<String>() {
         let inner: zero_postgres::Opts = url.as_str().try_into()?;
@@ -183,8 +183,8 @@ pub fn resolve_opts(py: Python<'_>, url_or_opts: &Bound<'_, PyAny>) -> PyroResul
         return Ok(opts.inner);
     }
 
-    // Try to downcast as Opts pyclass
-    if let Ok(opts_ref) = url_or_opts.downcast::<Opts>() {
+    // Try to cast as Opts pyclass
+    if let Ok(opts_ref) = url_or_opts.cast::<Opts>() {
         return Ok(opts_ref.borrow().inner.clone());
     }
 

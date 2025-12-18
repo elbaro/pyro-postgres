@@ -9,7 +9,7 @@ use zero_postgres::Result;
 use zero_postgres::handler::{BinaryHandler, TextHandler};
 use zero_postgres::protocol::backend::query::{CommandComplete, DataRow, RowDescription};
 
-use crate::from_wire_value::{decode_binary_to_python, decode_text_to_python};
+use crate::from_wire_value::decode_binary_to_python;
 
 /// A single row of raw data
 struct RawRow {
