@@ -69,12 +69,7 @@ impl SyncConn {
     // ─── Simple Query Protocol (Text) ───────────────────────────────────────
 
     #[pyo3(signature = (query, *, as_dict=false))]
-    fn query<'py>(
-        &self,
-        py: Python<'py>,
-        query: String,
-        as_dict: bool,
-    ) -> PyroResult<Vec<Py<PyAny>>> {
+    fn query(&self, py: Python<'_>, query: &str, as_dict: bool) -> PyroResult<Vec<Py<PyAny>>> {
         let mut guard = self.inner.lock();
         let conn = guard.as_mut().ok_or(Error::ConnectionClosedError)?;
 
@@ -83,21 +78,21 @@ impl SyncConn {
             conn.query(&query, &mut handler)?;
             *self.affected_rows.lock() = handler.rows_affected();
             let rows = handler.into_rows();
-            Ok(rows.bind(py).iter().map(|item| item.unbind()).collect())
+            Ok(rows.bind(py).iter().map(pyo3::Bound::unbind).collect())
         } else {
             let mut handler = TupleHandler::new(py);
             conn.query(&query, &mut handler)?;
             *self.affected_rows.lock() = handler.rows_affected();
             let rows = handler.into_rows();
-            Ok(rows.bind(py).iter().map(|item| item.unbind()).collect())
+            Ok(rows.bind(py).iter().map(pyo3::Bound::unbind).collect())
         }
     }
 
     #[pyo3(signature = (query, *, as_dict=false))]
-    fn query_first<'py>(
+    fn query_first(
         &self,
-        py: Python<'py>,
-        query: String,
+        py: Python<'_>,
+        query: &str,
         as_dict: bool,
     ) -> PyroResult<Option<Py<PyAny>>> {
         let mut guard = self.inner.lock();
@@ -141,9 +136,9 @@ impl SyncConn {
     // ─── Extended Query Protocol (Binary) ─────────────────────────────────────
 
     #[pyo3(signature = (query, params=Params::default(), *, as_dict=false))]
-    fn exec<'py>(
+    fn exec(
         &self,
-        py: Python<'py>,
+        py: Python<'_>,
         query: String,
         params: Params,
         as_dict: bool,
@@ -174,10 +169,10 @@ impl SyncConn {
     }
 
     #[pyo3(signature = (query, params=Params::default(), *, as_dict=false))]
-    fn exec_first<'py>(
+    fn exec_first(
         &self,
-        py: Python<'py>,
-        query: String,
+        py: Python<'_>,
+        query: &str,
         params: Params,
         as_dict: bool,
     ) -> PyroResult<Option<Py<PyAny>>> {
@@ -185,12 +180,12 @@ impl SyncConn {
         let conn = guard.as_mut().ok_or(Error::ConnectionClosedError)?;
 
         let mut cache = self.stmt_cache.lock();
-        if !cache.contains_key(&query) {
+        if !cache.contains_key(query) {
             let stmt = conn.prepare(&query)?;
-            cache.insert(query.clone(), stmt);
+            cache.insert(query.to_string(), stmt);
         }
         #[expect(clippy::unwrap_used)]
-        let stmt = cache.get(&query).unwrap();
+        let stmt = cache.get(query).unwrap();
 
         let params_adapter = ParamsAdapter::new(&params);
         if as_dict {
@@ -238,17 +233,17 @@ impl SyncConn {
     }
 
     #[pyo3(signature = (query, params_list=vec![]))]
-    fn exec_batch(&self, query: String, params_list: Vec<Params>) -> PyroResult<()> {
+    fn exec_batch(&self, query: &str, params_list: Vec<Params>) -> PyroResult<()> {
         let mut guard = self.inner.lock();
         let conn = guard.as_mut().ok_or(Error::ConnectionClosedError)?;
 
         let mut cache = self.stmt_cache.lock();
-        if !cache.contains_key(&query) {
+        if !cache.contains_key(query) {
             let stmt = conn.prepare(&query)?;
-            cache.insert(query.clone(), stmt);
+            cache.insert(query.to_string(), stmt);
         }
         #[expect(clippy::unwrap_used)]
-        let stmt = cache.get(&query).unwrap();
+        let stmt = cache.get(query).unwrap();
 
         for params in params_list {
             let mut handler = DropHandler::default();

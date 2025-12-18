@@ -9,7 +9,7 @@ use crate::error::PyroResult;
 
 pub type PyroFuture = PyAny;
 
-/// Iterator wrapper that keeps RaiiFuture alive during iteration
+/// Iterator wrapper that keeps `RaiiFuture` alive during iteration
 #[pyclass]
 struct PyroFutureIterator {
     iterator: Py<PyAny>,
@@ -39,7 +39,7 @@ impl PyroFutureIterator {
         self.iterator.bind(py).call_method1("throw", args)
     }
 
-    fn close<'py>(&self, py: Python<'py>) -> PyResult<()> {
+    fn close(&self, py: Python<'_>) -> PyResult<()> {
         match self.iterator.bind(py).call_method0("close") {
             Ok(_) => Ok(()),
             Err(e) if e.is_instance_of::<pyo3::exceptions::PyAttributeError>(py) => Ok(()),
@@ -111,13 +111,13 @@ impl PyTupleBuilder {
         Self { ptr }
     }
 
-    pub fn set<'py>(&self, index: usize, value: Bound<'py, PyAny>) {
+    pub fn set(&self, index: usize, value: Bound<'_, PyAny>) {
         unsafe {
             pyo3::ffi::PyTuple_SetItem(self.ptr, index as pyo3::ffi::Py_ssize_t, value.into_ptr());
         }
     }
 
-    pub fn build<'py>(self, py: Python<'py>) -> Bound<'py, PyTuple> {
+    pub fn build(self, py: Python<'_>) -> Bound<'_, PyTuple> {
         unsafe { Bound::from_owned_ptr(py, self.ptr).cast_into_unchecked() }
     }
 }

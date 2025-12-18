@@ -5,15 +5,15 @@ use tokio::runtime::Handle;
 use tokio::sync::oneshot;
 use tokio::task::JoinHandle as TokioJoinHandle;
 
-/// Global TokioThread instance
+/// Global `TokioThread` instance
 static GLOBAL_TOKIO_THREAD: OnceLock<TokioThread> = OnceLock::new();
 
-/// Get or initialize the global TokioThread instance
+/// Get or initialize the global `TokioThread` instance
 pub fn get_tokio_thread() -> &'static TokioThread {
     GLOBAL_TOKIO_THREAD.get_or_init(TokioThread::new)
 }
 
-/// A dedicated OS thread running a Tokio runtime with 'current_thread' flavor.
+/// A dedicated OS thread running a Tokio runtime with '`current_thread`' flavor.
 ///
 /// This struct spawns an OS thread that creates a Tokio runtime and blocks on
 /// `std::future::pending()` indefinitely. Futures can be spawned onto this runtime
@@ -25,7 +25,7 @@ pub struct TokioThread {
 }
 
 impl TokioThread {
-    /// Creates a new TokioThread with a dedicated OS thread running a Tokio runtime.
+    /// Creates a new `TokioThread` with a dedicated OS thread running a Tokio runtime.
     pub fn new() -> Self {
         let (handle_tx, handle_rx) = std::sync::mpsc::channel::<Arc<Handle>>();
         let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();

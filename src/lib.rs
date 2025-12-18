@@ -26,7 +26,7 @@ use crate::{
 #[pyfunction]
 /// Initialize the Tokio runtime thread.
 /// This is called automatically when the module is loaded.
-/// Note: worker_threads and thread_name parameters are ignored since we use a single-threaded runtime.
+/// Note: `worker_threads` and `thread_name` parameters are ignored since we use a single-threaded runtime.
 #[pyo3(signature = (worker_threads=None, thread_name=None))]
 fn init(worker_threads: Option<usize>, thread_name: Option<&str>) {
     // Initialize the global TokioThread

@@ -7,13 +7,13 @@ use pyo3::{
 
 use crate::py_imports::get_json_module;
 
-/// Zero-copy PostgreSQL value type using PyBackedStr and PyBackedBytes
+/// Zero-copy `PostgreSQL` value type using `PyBackedStr` and `PyBackedBytes`
 ///
-/// This enum is similar to the pyro-mysql Value but uses PyO3's zero-copy types
+/// This enum is similar to the pyro-mysql Value but uses `PyO3`'s zero-copy types
 /// for string and byte data, avoiding unnecessary allocations when converting
 /// from Python to Rust.
 ///
-/// Note: This type does not implement Clone because PyBackedBytes and PyBackedStr
+/// Note: This type does not implement Clone because `PyBackedBytes` and `PyBackedStr`
 /// are non-cloneable zero-copy views into Python objects.
 #[derive(Debug)]
 pub enum Value {

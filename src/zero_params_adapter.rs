@@ -1,4 +1,4 @@
-//! Adapter to convert Python parameter values to PostgreSQL wire format.
+//! Adapter to convert Python parameter values to `PostgreSQL` wire format.
 
 use zero_postgres::conversion::ToParams;
 
@@ -28,7 +28,7 @@ impl ToParams for ParamsAdapter<'_> {
     }
 }
 
-/// Encode a Python Value to PostgreSQL binary format.
+/// Encode a Python Value to `PostgreSQL` binary format.
 ///
 /// Format: Int32 length followed by bytes, or Int32 -1 for NULL.
 fn encode_value_to_binary(value: &Value, buf: &mut Vec<u8>) {
@@ -104,14 +104,14 @@ fn encode_value_to_binary(value: &Value, buf: &mut Vec<u8>) {
     }
 }
 
-/// Convert (year, month, day) to days since PostgreSQL epoch (2000-01-01)
+/// Convert (year, month, day) to days since `PostgreSQL` epoch (2000-01-01)
 fn ymd_to_days_since_pg_epoch(year: i32, month: u8, day: u8) -> i32 {
     // Algorithm from Howard Hinnant
     let y = if month <= 2 { year - 1 } else { year };
     let era = if y >= 0 { y } else { y - 399 } / 400;
     let yoe = y - era * 400;
-    let m = month as i32;
-    let d = day as i32;
+    let m = i32::from(month);
+    let d = i32::from(day);
     let doy = (153 * (if m > 2 { m - 3 } else { m + 9 }) + 2) / 5 + d - 1;
     let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
     let julian = era * 146_097 + doe;

@@ -40,8 +40,8 @@ impl AsyncConn {
     #[expect(clippy::new_ret_no_self)]
     #[staticmethod]
     #[pyo3(signature = (url_or_opts))]
-    pub fn new<'py>(
-        py: Python<'py>,
+    pub fn new(
+        py: Python<'_>,
         url_or_opts: &Bound<'_, PyAny>,
     ) -> PyResult<Py<PyroFuture>> {
         let opts = resolve_opts(py, url_or_opts)?;
@@ -68,7 +68,7 @@ impl AsyncConn {
         AsyncTransaction::new(slf, isolation_level_str, readonly)
     }
 
-    fn id<'py>(&self, py: Python<'py>) -> PyResult<Py<PyroFuture>> {
+    fn id(&self, py: Python<'_>) -> PyResult<Py<PyroFuture>> {
         let inner = self.inner.clone();
         rust_future_into_py(py, async move {
             let guard = inner.lock().await;
@@ -77,14 +77,14 @@ impl AsyncConn {
         })
     }
 
-    fn affected_rows<'py>(&self, py: Python<'py>) -> PyResult<Py<PyroFuture>> {
+    fn affected_rows(&self, py: Python<'_>) -> PyResult<Py<PyroFuture>> {
         let affected_rows = self.affected_rows.clone();
         rust_future_into_py(py, async move {
             Ok(*affected_rows.lock().await)
         })
     }
 
-    fn close<'py>(&self, py: Python<'py>) -> PyResult<Py<PyroFuture>> {
+    fn close(&self, py: Python<'_>) -> PyResult<Py<PyroFuture>> {
         let inner = self.inner.clone();
         rust_future_into_py(py, async move {
             let mut guard = inner.lock().await;
@@ -93,7 +93,7 @@ impl AsyncConn {
         })
     }
 
-    fn server_version<'py>(&self, py: Python<'py>) -> PyResult<Py<PyroFuture>> {
+    fn server_version(&self, py: Python<'_>) -> PyResult<Py<PyroFuture>> {
         let inner = self.inner.clone();
         rust_future_into_py(py, async move {
             let guard = inner.lock().await;
@@ -107,7 +107,7 @@ impl AsyncConn {
         })
     }
 
-    fn ping<'py>(&self, py: Python<'py>) -> PyResult<Py<PyroFuture>> {
+    fn ping(&self, py: Python<'_>) -> PyResult<Py<PyroFuture>> {
         let inner = self.inner.clone();
         rust_future_into_py(py, async move {
             let mut guard = inner.lock().await;
@@ -120,9 +120,9 @@ impl AsyncConn {
     // ─── Simple Query Protocol (Text) ───────────────────────────────────────
 
     #[pyo3(signature = (query, *, as_dict=false))]
-    fn query<'py>(
+    fn query(
         &self,
-        py: Python<'py>,
+        py: Python<'_>,
         query: String,
         as_dict: bool,
     ) -> PyResult<Py<PyroFuture>> {
@@ -142,7 +142,7 @@ impl AsyncConn {
                 *affected_rows_arc.lock().await = handler.rows_affected();
                 Python::attach(|py| {
                     let rows: Vec<Py<PyDict>> = handler.rows_to_python(py)?;
-                    Ok(rows.into_iter().map(|d| d.into_any()).collect())
+                    Ok(rows.into_iter().map(pyo3::Py::into_any).collect())
                 })
             } else {
                 let mut handler = tuple_handler.lock().await;
@@ -151,16 +151,16 @@ impl AsyncConn {
                 *affected_rows_arc.lock().await = handler.rows_affected();
                 Python::attach(|py| {
                     let rows: Vec<Py<PyTuple>> = handler.rows_to_python(py)?;
-                    Ok(rows.into_iter().map(|t| t.into_any()).collect())
+                    Ok(rows.into_iter().map(pyo3::Py::into_any).collect())
                 })
             }
         })
     }
 
     #[pyo3(signature = (query, *, as_dict=false))]
-    fn query_first<'py>(
+    fn query_first(
         &self,
-        py: Python<'py>,
+        py: Python<'_>,
         query: String,
         as_dict: bool,
     ) -> PyResult<Py<PyroFuture>> {
@@ -180,7 +180,7 @@ impl AsyncConn {
                 *affected_rows_arc.lock().await = handler.rows_affected();
                 Python::attach(|py| {
                     let rows = handler.rows_to_python(py)?;
-                    Ok(rows.into_iter().next().map(|d| d.into_any()))
+                    Ok(rows.into_iter().next().map(pyo3::Py::into_any))
                 })
             } else {
                 let mut handler = tuple_handler.lock().await;
@@ -189,13 +189,13 @@ impl AsyncConn {
                 *affected_rows_arc.lock().await = handler.rows_affected();
                 Python::attach(|py| {
                     let rows = handler.rows_to_python(py)?;
-                    Ok(rows.into_iter().next().map(|t| t.into_any()))
+                    Ok(rows.into_iter().next().map(pyo3::Py::into_any))
                 })
             }
         })
     }
 
-    fn query_drop<'py>(&self, py: Python<'py>, query: String) -> PyResult<Py<PyroFuture>> {
+    fn query_drop(&self, py: Python<'_>, query: String) -> PyResult<Py<PyroFuture>> {
         let inner = self.inner.clone();
         let affected_rows_arc = self.affected_rows.clone();
 
@@ -214,9 +214,9 @@ impl AsyncConn {
     // ─── Extended Query Protocol (Binary) ─────────────────────────────────────
 
     #[pyo3(signature = (query, params=None, *, as_dict=false))]
-    fn exec<'py>(
+    fn exec(
         &self,
-        py: Python<'py>,
+        py: Python<'_>,
         query: PyBackedStr,
         params: Option<Py<PyAny>>,
         as_dict: bool,
@@ -253,7 +253,7 @@ impl AsyncConn {
                 *affected_rows_arc.lock().await = handler.rows_affected();
                 Python::attach(|py| {
                     let rows: Vec<Py<PyDict>> = handler.rows_to_python(py)?;
-                    Ok(rows.into_iter().map(|d| d.into_any()).collect())
+                    Ok(rows.into_iter().map(pyo3::Py::into_any).collect())
                 })
             } else {
                 let mut handler = tuple_handler.lock().await;
@@ -262,16 +262,16 @@ impl AsyncConn {
                 *affected_rows_arc.lock().await = handler.rows_affected();
                 Python::attach(|py| {
                     let rows: Vec<Py<PyTuple>> = handler.rows_to_python(py)?;
-                    Ok(rows.into_iter().map(|t| t.into_any()).collect())
+                    Ok(rows.into_iter().map(pyo3::Py::into_any).collect())
                 })
             }
         })
     }
 
     #[pyo3(signature = (query, params=None, *, as_dict=false))]
-    fn exec_first<'py>(
+    fn exec_first(
         &self,
-        py: Python<'py>,
+        py: Python<'_>,
         query: PyBackedStr,
         params: Option<Py<PyAny>>,
         as_dict: bool,
@@ -308,7 +308,7 @@ impl AsyncConn {
                 *affected_rows_arc.lock().await = handler.rows_affected();
                 Python::attach(|py| {
                     let rows = handler.rows_to_python(py)?;
-                    Ok(rows.into_iter().next().map(|d| d.into_any()))
+                    Ok(rows.into_iter().next().map(pyo3::Py::into_any))
                 })
             } else {
                 let mut handler = tuple_handler.lock().await;
@@ -317,16 +317,16 @@ impl AsyncConn {
                 *affected_rows_arc.lock().await = handler.rows_affected();
                 Python::attach(|py| {
                     let rows = handler.rows_to_python(py)?;
-                    Ok(rows.into_iter().next().map(|t| t.into_any()))
+                    Ok(rows.into_iter().next().map(pyo3::Py::into_any))
                 })
             }
         })
     }
 
     #[pyo3(signature = (query, params=None))]
-    fn exec_drop<'py>(
+    fn exec_drop(
         &self,
-        py: Python<'py>,
+        py: Python<'_>,
         query: PyBackedStr,
         params: Option<Py<PyAny>>,
     ) -> PyResult<Py<PyroFuture>> {
@@ -362,9 +362,9 @@ impl AsyncConn {
     }
 
     #[pyo3(signature = (query, params=vec![]))]
-    fn exec_batch<'py>(
+    fn exec_batch(
         &self,
-        py: Python<'py>,
+        py: Python<'_>,
         query: PyBackedStr,
         params: Vec<Py<PyAny>>,
     ) -> PyResult<Py<PyroFuture>> {

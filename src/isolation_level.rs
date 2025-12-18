@@ -1,6 +1,6 @@
 use pyo3::prelude::*;
 
-/// PostgreSQL transaction isolation levels.
+/// `PostgreSQL` transaction isolation levels.
 #[pyclass(module = "pyro_postgres", name = "IsolationLevel", eq)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum IsolationLevel {

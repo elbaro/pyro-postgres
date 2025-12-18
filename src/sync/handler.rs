@@ -1,4 +1,4 @@
-//! PostgreSQL result handlers for Python conversion.
+//! `PostgreSQL` result handlers for Python conversion.
 
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList};
@@ -34,7 +34,7 @@ impl<'py> TupleHandler<'py> {
     }
 }
 
-impl<'py> TextHandler for TupleHandler<'py> {
+impl TextHandler for TupleHandler<'_> {
     fn row(&mut self, cols: RowDescription<'_>, row: DataRow<'_>) -> Result<()> {
         let fields = cols.fields();
         let tuple = PyTupleBuilder::new(self.py, fields.len());
@@ -62,7 +62,7 @@ impl<'py> TextHandler for TupleHandler<'py> {
     }
 }
 
-impl<'py> BinaryHandler for TupleHandler<'py> {
+impl BinaryHandler for TupleHandler<'_> {
     fn row(&mut self, cols: RowDescription<'_>, row: DataRow<'_>) -> Result<()> {
         let fields = cols.fields();
         let tuple = PyTupleBuilder::new(self.py, fields.len());
@@ -115,7 +115,7 @@ impl<'py> DictHandler<'py> {
     }
 }
 
-impl<'py> TextHandler for DictHandler<'py> {
+impl TextHandler for DictHandler<'_> {
     fn row(&mut self, cols: RowDescription<'_>, row: DataRow<'_>) -> Result<()> {
         let dict = PyDict::new(self.py);
 
@@ -139,7 +139,7 @@ impl<'py> TextHandler for DictHandler<'py> {
     }
 }
 
-impl<'py> BinaryHandler for DictHandler<'py> {
+impl BinaryHandler for DictHandler<'_> {
     fn row(&mut self, cols: RowDescription<'_>, row: DataRow<'_>) -> Result<()> {
         let dict = PyDict::new(self.py);
 

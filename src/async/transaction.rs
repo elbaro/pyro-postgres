@@ -77,9 +77,9 @@ impl AsyncTransaction {
     }
 
     #[pyo3(signature = (_exc_type=None, _exc_val=None, _exc_tb=None))]
-    fn __aexit__<'py>(
+    fn __aexit__(
         &mut self,
-        py: Python<'py>,
+        py: Python<'_>,
         _exc_type: Option<&Bound<'_, PyAny>>,
         _exc_val: Option<&Bound<'_, PyAny>>,
         _exc_tb: Option<&Bound<'_, PyAny>>,
@@ -117,7 +117,7 @@ impl AsyncTransaction {
         })
     }
 
-    fn commit<'py>(&mut self, py: Python<'py>) -> PyResult<Py<PyroFuture>> {
+    fn commit(&mut self, py: Python<'_>) -> PyResult<Py<PyroFuture>> {
         if !self.started {
             return Err(Error::IncorrectApiUsageError("Transaction not started").into());
         }
@@ -149,7 +149,7 @@ impl AsyncTransaction {
         })
     }
 
-    fn rollback<'py>(&mut self, py: Python<'py>) -> PyResult<Py<PyroFuture>> {
+    fn rollback(&mut self, py: Python<'_>) -> PyResult<Py<PyroFuture>> {
         if !self.started {
             return Err(Error::IncorrectApiUsageError("Transaction not started").into());
         }

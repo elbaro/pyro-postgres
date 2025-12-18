@@ -1,4 +1,4 @@
-//! Async PostgreSQL result handlers for Python conversion.
+//! Async `PostgreSQL` result handlers for Python conversion.
 //!
 //! These handlers collect row data without holding GIL, then convert to Python
 //! objects when needed.
@@ -74,7 +74,7 @@ impl TextHandler for TupleHandler {
 
         for (field, value) in fields.iter().zip(row.iter()) {
             names.push(field.name.to_string());
-            columns.push((field.type_oid(), value.map(|b| b.to_vec())));
+            columns.push((field.type_oid(), value.map(<[u8]>::to_vec)));
         }
 
         self.rows.push(RawRow { columns, names });
@@ -95,7 +95,7 @@ impl BinaryHandler for TupleHandler {
 
         for (field, value) in fields.iter().zip(row.iter()) {
             names.push(field.name.to_string());
-            columns.push((field.type_oid(), value.map(|b| b.to_vec())));
+            columns.push((field.type_oid(), value.map(<[u8]>::to_vec)));
         }
 
         self.rows.push(RawRow { columns, names });
@@ -161,7 +161,7 @@ impl TextHandler for DictHandler {
 
         for (field, value) in fields.iter().zip(row.iter()) {
             names.push(field.name.to_string());
-            columns.push((field.type_oid(), value.map(|b| b.to_vec())));
+            columns.push((field.type_oid(), value.map(<[u8]>::to_vec)));
         }
 
         self.rows.push(RawRow { columns, names });
@@ -182,7 +182,7 @@ impl BinaryHandler for DictHandler {
 
         for (field, value) in fields.iter().zip(row.iter()) {
             names.push(field.name.to_string());
-            columns.push((field.type_oid(), value.map(|b| b.to_vec())));
+            columns.push((field.type_oid(), value.map(<[u8]>::to_vec)));
         }
 
         self.rows.push(RawRow { columns, names });

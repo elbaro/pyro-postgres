@@ -2,9 +2,9 @@ use pyo3::prelude::*;
 
 use crate::error::{Error, PyroResult};
 
-/// Connection options for PostgreSQL connections.
+/// Connection options for `PostgreSQL` connections.
 ///
-/// This class provides a builder API for configuring PostgreSQL connection parameters.
+/// This class provides a builder API for configuring `PostgreSQL` connection parameters.
 /// Methods can be chained to configure multiple options, and the instance can be
 /// passed directly to connection methods.
 ///
@@ -27,7 +27,7 @@ impl Opts {
     /// Create a new Opts instance.
     ///
     /// # Arguments
-    /// * `url` - Optional PostgreSQL connection URL. If provided, parses the URL.
+    /// * `url` - Optional `PostgreSQL` connection URL. If provided, parses the URL.
     ///           If not provided, creates default opts.
     ///
     /// # URL Format
@@ -138,7 +138,7 @@ impl Opts {
     /// Enable or disable automatic upgrade from TCP to Unix socket.
     ///
     /// When enabled and connected via TCP to loopback, the driver will query
-    /// unix_socket_directories and reconnect using the Unix socket for better performance.
+    /// `unix_socket_directories` and reconnect using the Unix socket for better performance.
     ///
     /// # Arguments
     /// * `enable` - Whether to enable upgrade to Unix socket (default: true)
@@ -170,7 +170,7 @@ impl Opts {
     }
 }
 
-/// Helper to convert either a String URL or Opts object to zero_postgres::Opts
+/// Helper to convert either a String URL or Opts object to `zero_postgres::Opts`
 pub fn resolve_opts(_py: Python<'_>, url_or_opts: &Bound<'_, PyAny>) -> PyroResult<zero_postgres::Opts> {
     // Try to extract as string first
     if let Ok(url) = url_or_opts.extract::<String>() {

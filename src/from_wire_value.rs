@@ -1,4 +1,4 @@
-//! Convert PostgreSQL wire format values to Python objects.
+//! Convert `PostgreSQL` wire format values to Python objects.
 
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyString};
@@ -34,7 +34,7 @@ pub const OID_CHAR: u32 = 18;
 pub const OID_BPCHAR: u32 = 1042;
 pub const OID_NAME: u32 = 19;
 
-/// Decode a text-format PostgreSQL value to a Python object.
+/// Decode a text-format `PostgreSQL` value to a Python object.
 ///
 /// Text format is used for simple queries. Values are UTF-8 encoded strings.
 pub fn decode_text_to_python(py: Python<'_>, oid: u32, bytes: &[u8]) -> PyResult<Py<PyAny>> {
@@ -161,9 +161,9 @@ pub fn decode_text_to_python(py: Python<'_>, oid: u32, bytes: &[u8]) -> PyResult
     }
 }
 
-/// Decode a binary-format PostgreSQL value to a Python object.
+/// Decode a binary-format `PostgreSQL` value to a Python object.
 ///
-/// Binary format uses PostgreSQL's internal representation.
+/// Binary format uses `PostgreSQL`'s internal representation.
 pub fn decode_binary_to_python(py: Python<'_>, oid: u32, bytes: &[u8]) -> PyResult<Py<PyAny>> {
     match oid {
         OID_BOOL => {
@@ -323,7 +323,7 @@ pub fn decode_binary_to_python(py: Python<'_>, oid: u32, bytes: &[u8]) -> PyResu
     }
 }
 
-/// Decode PostgreSQL text-format bytea (hex or escape format)
+/// Decode `PostgreSQL` text-format bytea (hex or escape format)
 fn decode_bytea_text(s: &str) -> PyResult<Vec<u8>> {
     if let Some(hex) = s.strip_prefix("\\x") {
         // Hex format
@@ -370,7 +370,7 @@ fn decode_bytea_text(s: &str) -> PyResult<Vec<u8>> {
     }
 }
 
-/// Parse PostgreSQL text date format: YYYY-MM-DD
+/// Parse `PostgreSQL` text date format: YYYY-MM-DD
 fn parse_date(s: &str) -> PyResult<(i32, u32, u32)> {
     let parts: Vec<&str> = s.split('-').collect();
     if parts.len() != 3 {
@@ -390,7 +390,7 @@ fn parse_date(s: &str) -> PyResult<(i32, u32, u32)> {
     Ok((year, month, day))
 }
 
-/// Parse PostgreSQL text time format: HH:MM:SS[.microseconds][+/-TZ]
+/// Parse `PostgreSQL` text time format: HH:MM:SS[.microseconds][+/-TZ]
 fn parse_time(s: &str) -> PyResult<(u32, u32, u32, u32)> {
     // Strip timezone if present
     let time_part = s.split(['+', '-']).next().unwrap_or(s);
@@ -430,7 +430,7 @@ fn parse_time(s: &str) -> PyResult<(u32, u32, u32, u32)> {
     Ok((hour, minute, second, micro))
 }
 
-/// Parse PostgreSQL text timestamp format: YYYY-MM-DD HH:MM:SS[.microseconds][+/-TZ]
+/// Parse `PostgreSQL` text timestamp format: YYYY-MM-DD HH:MM:SS[.microseconds][+/-TZ]
 fn parse_timestamp(s: &str) -> PyResult<(i32, u32, u32, u32, u32, u32, u32)> {
     let parts: Vec<&str> = s.split(' ').collect();
     if parts.is_empty() {
@@ -449,7 +449,7 @@ fn parse_timestamp(s: &str) -> PyResult<(i32, u32, u32, u32, u32, u32, u32)> {
     Ok((year, month, day, hour, minute, second, micro))
 }
 
-/// Parse PostgreSQL text interval format (simplified)
+/// Parse `PostgreSQL` text interval format (simplified)
 fn parse_interval(s: &str) -> PyResult<(i32, i32, i32)> {
     // This is a simplified parser - PostgreSQL interval format is complex
     // For now, return as zero interval - proper parsing would need more work
@@ -457,7 +457,7 @@ fn parse_interval(s: &str) -> PyResult<(i32, i32, i32)> {
     Ok((0, 0, 0))
 }
 
-/// Convert days since PostgreSQL epoch (2000-01-01) to (year, month, day)
+/// Convert days since `PostgreSQL` epoch (2000-01-01) to (year, month, day)
 fn days_since_pg_epoch_to_ymd(days: i32) -> (i32, u32, u32) {
     // PostgreSQL epoch is 2000-01-01 which is day 730120 in Julian calendar
     let julian = days + 2_451_545; // J2000 epoch
@@ -488,7 +488,7 @@ fn micros_to_time(micros: i64) -> (u32, u32, u32, u32) {
     (hour, minute, second, micro)
 }
 
-/// Convert microseconds since PostgreSQL epoch to datetime components
+/// Convert microseconds since `PostgreSQL` epoch to datetime components
 fn micros_since_pg_epoch_to_datetime(micros: i64) -> (i32, u32, u32, u32, u32, u32, u32) {
     let days = (micros / 86_400_000_000) as i32;
     let day_micros = micros % 86_400_000_000;
@@ -499,7 +499,7 @@ fn micros_since_pg_epoch_to_datetime(micros: i64) -> (i32, u32, u32, u32, u32, u
     (year, month, day, hour, minute, second, micro)
 }
 
-/// Decode PostgreSQL binary numeric format to string
+/// Decode `PostgreSQL` binary numeric format to string
 fn decode_numeric_binary(bytes: &[u8]) -> PyResult<String> {
     if bytes.len() < 8 {
         return Err(pyo3::exceptions::PyValueError::new_err(
