@@ -1,0 +1,8 @@
+/.cargo
+/target
+/CLAUDE.md
+/uv.lock
+__pycache__
+/.direnv/
+/.envrc
+*.so

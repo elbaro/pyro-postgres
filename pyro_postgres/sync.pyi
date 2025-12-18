@@ -1,0 +1,188 @@
+"""Synchronous PostgreSQL driver components."""
+
+from types import TracebackType
+from typing import Any, Literal, Self, Sequence, overload
+
+from pyro_postgres import IsolationLevel, Opts, Params
+
+class Transaction:
+    """
+    Represents a synchronous PostgreSQL transaction.
+
+    Note: Query and exec methods are NOT available on Transaction.
+    Use the connection's query/exec methods while the transaction is active.
+    """
+
+    def __enter__(self) -> Self: ...
+    def __exit__(
+        self,
+        type_: type[BaseException] | None,
+        value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None: ...
+    def commit(self) -> None:
+        """Commit the transaction."""
+        ...
+
+    def rollback(self) -> None:
+        """Rollback the transaction."""
+        ...
+
+class Conn:
+    """
+    Synchronous PostgreSQL connection.
+    """
+
+    def __init__(self, url_or_opts: str | Opts) -> None:
+        """
+        Create a new synchronous connection.
+
+        Args:
+            url_or_opts: PostgreSQL connection URL (e.g., 'postgres://user:password@host:port/database') or Opts object.
+        """
+        ...
+
+    def start_transaction(
+        self,
+        isolation_level: IsolationLevel | None = None,
+        readonly: bool | None = None,
+    ) -> Transaction: ...
+    def id(self) -> int: ...
+    def affected_rows(self) -> int | None:
+        """Get the number of affected rows from the last operation."""
+        ...
+
+    def ping(self) -> None:
+        """Ping the server to check connection."""
+        ...
+
+    @overload
+    def query(
+        self, query: str, *, as_dict: Literal[False] = False
+    ) -> list[tuple[Any, ...]]: ...
+    @overload
+    def query(self, query: str, *, as_dict: Literal[True]) -> list[dict[str, Any]]: ...
+    def query(
+        self, query: str, *, as_dict: bool = False
+    ) -> list[tuple[Any, ...]] | list[dict[str, Any]]:
+        """
+        Execute a query using text protocol and return all rows.
+
+        Args:
+            query: SQL query string.
+            as_dict: If True, return rows as dictionaries. If False (default), return rows as tuples.
+
+        Returns:
+            List of tuples (default) or dictionaries.
+        """
+        ...
+
+    @overload
+    def query_first(
+        self, query: str, *, as_dict: Literal[False] = False
+    ) -> tuple[Any, ...] | None: ...
+    @overload
+    def query_first(
+        self, query: str, *, as_dict: Literal[True]
+    ) -> dict[str, Any] | None: ...
+    def query_first(
+        self, query: str, *, as_dict: bool = False
+    ) -> tuple[Any, ...] | dict[str, Any] | None:
+        """
+        Execute a query using text protocol and return the first row.
+
+        Args:
+            query: SQL query string.
+            as_dict: If True, return row as dictionary. If False (default), return row as tuple.
+
+        Returns:
+            First row as tuple (default) or dictionary, or None if no results.
+        """
+        ...
+
+    def query_drop(self, query: str) -> None:
+        """
+        Execute a query using text protocol and discard the results.
+
+        Args:
+            query: SQL query string.
+        """
+        ...
+
+    @overload
+    def exec(
+        self, query: str, params: Params = None, *, as_dict: Literal[False] = False
+    ) -> list[tuple[Any, ...]]: ...
+    @overload
+    def exec(
+        self, query: str, params: Params = None, *, as_dict: Literal[True]
+    ) -> list[dict[str, Any]]: ...
+    def exec(
+        self, query: str, params: Params = None, *, as_dict: bool = False
+    ) -> list[tuple[Any, ...]] | list[dict[str, Any]]:
+        """
+        Execute a query using extended protocol and return all rows.
+
+        Args:
+            query: SQL query string with $1, $2, ... placeholders.
+            params: Query parameters.
+            as_dict: If True, return rows as dictionaries. If False (default), return rows as tuples.
+
+        Returns:
+            List of tuples (default) or dictionaries.
+        """
+        ...
+
+    @overload
+    def exec_first(
+        self, query: str, params: Params = None, *, as_dict: Literal[False] = False
+    ) -> tuple[Any, ...] | None: ...
+    @overload
+    def exec_first(
+        self, query: str, params: Params = None, *, as_dict: Literal[True]
+    ) -> dict[str, Any] | None: ...
+    def exec_first(
+        self, query: str, params: Params = None, *, as_dict: bool = False
+    ) -> tuple[Any, ...] | dict[str, Any] | None:
+        """
+        Execute a query using extended protocol and return the first row.
+
+        Args:
+            query: SQL query string with $1, $2, ... placeholders.
+            params: Query parameters.
+            as_dict: If True, return row as dictionary. If False (default), return row as tuple.
+
+        Returns:
+            First row as tuple (default) or dictionary, or None if no results.
+        """
+        ...
+
+    def exec_drop(self, query: str, params: Params = None) -> None:
+        """
+        Execute a query using extended protocol and discard the results.
+
+        Args:
+            query: SQL query string with $1, $2, ... placeholders.
+            params: Query parameters.
+        """
+        ...
+
+    def exec_batch(self, query: str, params_list: Sequence[Params] = []) -> None:
+        """
+        Execute a query multiple times with different parameters.
+
+        Args:
+            query: SQL query string with $1, $2, ... placeholders.
+            params_list: List of parameter sets.
+        """
+        ...
+
+    def close(self) -> None:
+        """
+        Disconnect from the PostgreSQL server.
+
+        This closes the connection and makes it unusable for further operations.
+        """
+        ...
+
+    def server_version(self) -> str: ...

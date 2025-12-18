@@ -1,0 +1,56 @@
+[package]
+name = "pyro_postgres"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+name = "pyro_postgres"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+pyo3 = { version = "0.27.1", features = ["abi3-py310", "experimental-async", "experimental-inspect"] }
+pyo3-async-runtimes = { version = "0.27.0", features = ["tokio-runtime"] }
+pyo3-log = "0.13.2"
+log = "0.4"
+tokio = { version = "1", features = ["rt", "net", "io-util", "sync"] }
+zero-postgres = { path = "../zero-postgres", features = ["tokio", "sync"] }
+parking_lot = "0.12"
+thiserror = "2"
+either = "1"
+ryu = "1"
+
+[features]
+default = ["extension-module"]
+extension-module = ["pyo3/extension-module"]
+
+[profile.release]
+lto = true
+
+[profile.bench]
+lto = true
+
+[profile.profiling]
+inherits = "release"
+debug = true
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+
+cast_possible_truncation = "allow"
+cast_possible_wrap = "allow"
+cast_precision_loss = "allow"
+cast_sign_loss = "allow"
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+module_name_repetitions = "allow"
+must_use_candidate = "allow"
+similar_names = "allow"
+single_match_else = "allow"
+struct_excessive_bools = "allow"
+too_many_lines = "allow"
+unnecessary_wraps = "allow"
+wildcard_imports = "allow"
+
+# Deny these
+unwrap_used = "deny"

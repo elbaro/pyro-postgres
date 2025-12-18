@@ -1,0 +1,15 @@
+[build-system]
+requires = ["maturin>=1,<2"]
+build-backend = "maturin"
+
+[project]
+name = "pyro-postgres"
+requires-python = ">=3.10"
+dynamic = ["version"]
+dependencies = ["typing_extensions"]
+
+[tool.maturin]
+features = ["pyo3/extension-module"]
+
+[tool.uv]
+cache-keys = [{ file = "pyro_postgres/*.pyi" }, { file = "pyro_postgres/*.py" }, { glob = "src/**/*.rs" }]
