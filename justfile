@@ -7,6 +7,10 @@ check:
     black .
     PYTHONPATH=. pytest
 
+bench:
+    just build
+    PYTHONPATH=. cargo bench --no-default-features
+
 publish:
     just check
     maturin build --release
