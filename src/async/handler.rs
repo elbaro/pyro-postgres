@@ -9,7 +9,15 @@ use zero_postgres::Result;
 use zero_postgres::handler::{BinaryHandler, TextHandler};
 use zero_postgres::protocol::backend::query::{CommandComplete, DataRow, RowDescription};
 
-use crate::from_wire_value::decode_binary_to_python;
+use crate::from_wire_value::{decode_binary_to_python, decode_text_to_python};
+
+/// Format of data stored in raw rows
+#[derive(Clone, Copy, Default, PartialEq, Eq)]
+enum DataFormat {
+    #[default]
+    Text,
+    Binary,
+}
 
 /// A single row of raw data
 struct RawRow {
@@ -24,6 +32,7 @@ struct RawRow {
 pub struct TupleHandler {
     rows: Vec<RawRow>,
     rows_affected: Option<u64>,
+    format: DataFormat,
 }
 
 impl TupleHandler {
@@ -34,6 +43,7 @@ impl TupleHandler {
     pub fn clear(&mut self) {
         self.rows.clear();
         self.rows_affected = None;
+        self.format = DataFormat::Text;
     }
 
     pub fn rows_affected(&self) -> Option<u64> {
@@ -45,20 +55,21 @@ impl TupleHandler {
         let mut result = Vec::with_capacity(self.rows.len());
 
         for row in &self.rows {
-            let tuple = PyTuple::new(
-                py,
-                row.columns.iter().map(|(oid, data)| {
-                    match data {
-                        None => py.None().into_bound(py),
-                        Some(bytes) => {
-                            // Use binary decoding since we stored raw bytes
-                            decode_binary_to_python(py, *oid, bytes)
-                                .unwrap_or_else(|_| py.None())
-                                .into_bound(py)
+            let mut tuple_values = Vec::with_capacity(row.columns.len());
+            for (oid, data) in &row.columns {
+                let py_value = match data {
+                    None => py.None(),
+                    Some(bytes) => {
+                        if self.format == DataFormat::Binary {
+                            decode_binary_to_python(py, *oid, bytes)?
+                        } else {
+                            decode_text_to_python(py, *oid, bytes)?
                         }
                     }
-                }),
-            )?;
+                };
+                tuple_values.push(py_value);
+            }
+            let tuple = PyTuple::new(py, tuple_values)?;
             result.push(tuple.unbind());
         }
 
@@ -68,6 +79,7 @@ impl TupleHandler {
 
 impl TextHandler for TupleHandler {
     fn row(&mut self, cols: RowDescription<'_>, row: DataRow<'_>) -> Result<()> {
+        self.format = DataFormat::Text;
         let fields = cols.fields();
         let mut columns = Vec::with_capacity(fields.len());
         let mut names = Vec::with_capacity(fields.len());
@@ -89,6 +101,7 @@ impl TextHandler for TupleHandler {
 
 impl BinaryHandler for TupleHandler {
     fn row(&mut self, cols: RowDescription<'_>, row: DataRow<'_>) -> Result<()> {
+        self.format = DataFormat::Binary;
         let fields = cols.fields();
         let mut columns = Vec::with_capacity(fields.len());
         let mut names = Vec::with_capacity(fields.len());
@@ -113,6 +126,7 @@ impl BinaryHandler for TupleHandler {
 pub struct DictHandler {
     rows: Vec<RawRow>,
     rows_affected: Option<u64>,
+    format: DataFormat,
 }
 
 impl DictHandler {
@@ -123,6 +137,7 @@ impl DictHandler {
     pub fn clear(&mut self) {
         self.rows.clear();
         self.rows_affected = None;
+        self.format = DataFormat::Text;
     }
 
     pub fn rows_affected(&self) -> Option<u64> {
@@ -138,10 +153,14 @@ impl DictHandler {
 
             for ((oid, data), name) in row.columns.iter().zip(row.names.iter()) {
                 let py_value = match data {
-                    None => py.None().into_bound(py),
-                    Some(bytes) => decode_binary_to_python(py, *oid, bytes)
-                        .unwrap_or_else(|_| py.None())
-                        .into_bound(py),
+                    None => py.None(),
+                    Some(bytes) => {
+                        if self.format == DataFormat::Binary {
+                            decode_binary_to_python(py, *oid, bytes)?
+                        } else {
+                            decode_text_to_python(py, *oid, bytes)?
+                        }
+                    }
                 };
                 dict.set_item(name, py_value)?;
             }
@@ -155,6 +174,7 @@ impl DictHandler {
 
 impl TextHandler for DictHandler {
     fn row(&mut self, cols: RowDescription<'_>, row: DataRow<'_>) -> Result<()> {
+        self.format = DataFormat::Text;
         let fields = cols.fields();
         let mut columns = Vec::with_capacity(fields.len());
         let mut names = Vec::with_capacity(fields.len());
@@ -176,6 +196,7 @@ impl TextHandler for DictHandler {
 
 impl BinaryHandler for DictHandler {
     fn row(&mut self, cols: RowDescription<'_>, row: DataRow<'_>) -> Result<()> {
+        self.format = DataFormat::Binary;
         let fields = cols.fields();
         let mut columns = Vec::with_capacity(fields.len());
         let mut names = Vec::with_capacity(fields.len());
