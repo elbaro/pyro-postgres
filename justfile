@@ -10,6 +10,8 @@ check:
 bench:
     just build
     PYTHONPATH=. cargo bench --no-default-features
+    mkdir -p benchmark
+    for dir in target/criterion/*/report; do name=$(basename $(dirname "$dir")); cp "$dir/violin.svg" "benchmark/${name}.svg"; done
 
 publish:
     just check

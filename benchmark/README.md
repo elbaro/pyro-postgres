@@ -1,6 +1,7 @@
 # Benchmarks
 
 - All use TCP, not unix socket
+- `TEMP TABLE` is used to avoid disk IO
 
 ## INSERT
 

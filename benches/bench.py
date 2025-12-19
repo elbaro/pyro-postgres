@@ -21,24 +21,39 @@ DATA = [
 
 # --- Connection Setup Helpers ------------------------------------------------
 
+CREATE_TEMP_TABLE = """
+CREATE TEMP TABLE IF NOT EXISTS benchmark_test (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100),
+    age INT,
+    email VARCHAR(100),
+    score FLOAT,
+    description VARCHAR(100)
+)
+"""
+
 
 async def create_pyro_async_conn():
     url = "postgres://test:1234@localhost:5432/test"
-    return await pyro_postgres.AsyncConn.new(url)
+    conn = await pyro_postgres.AsyncConn.new(url)
+    await conn.exec_drop(CREATE_TEMP_TABLE)
+    return conn
 
 
 async def create_asyncpg_conn():
-    return await asyncpg.connect(
+    conn = await asyncpg.connect(
         host="localhost",
         port=5432,
         user="test",
         password="1234",
         database="test",
     )
+    await conn.execute(CREATE_TEMP_TABLE)
+    return conn
 
 
 async def create_psycopg_async_conn():
-    return await psycopg.AsyncConnection.connect(
+    conn = await psycopg.AsyncConnection.connect(
         host="localhost",
         port=5432,
         user="test",
@@ -46,10 +61,13 @@ async def create_psycopg_async_conn():
         dbname="test",
         autocommit=True,
     )
+    async with conn.cursor() as cursor:
+        await cursor.execute(CREATE_TEMP_TABLE)
+    return conn
 
 
 def create_psycopg_sync_conn():
-    return psycopg.connect(
+    conn = psycopg.connect(
         host="localhost",
         port=5432,
         user="test",
@@ -57,6 +75,87 @@ def create_psycopg_sync_conn():
         dbname="test",
         autocommit=True,
     )
+    with conn.cursor() as cursor:
+        cursor.execute(CREATE_TEMP_TABLE)
+    return conn
+
+
+def create_pyro_sync_conn():
+    conn = pyro_postgres.SyncConn("postgres://test:1234@localhost:5432/test")
+    conn.exec_drop(CREATE_TEMP_TABLE)
+    return conn
+
+
+# --- Table Helpers -----------------------------------------------------------
+
+
+async def populate_table_pyro_async(conn, n):
+    """Populate temp table with n rows"""
+    for i in range(n):
+        await conn.exec_drop(
+            "INSERT INTO benchmark_test (name, age, email, score, description) VALUES ($1, $2, $3, $4, $5)",
+            DATA[i % 10000],
+        )
+
+
+async def populate_table_asyncpg(conn, n):
+    """Populate temp table with n rows"""
+    for i in range(n):
+        await conn.execute(
+            "INSERT INTO benchmark_test (name, age, email, score, description) VALUES ($1, $2, $3, $4, $5)",
+            *DATA[i % 10000],
+        )
+
+
+async def populate_table_psycopg_async(conn, n):
+    """Populate temp table with n rows"""
+    async with conn.cursor() as cursor:
+        for i in range(n):
+            await cursor.execute(
+                "INSERT INTO benchmark_test (name, age, email, score, description) VALUES (%s, %s, %s, %s, %s)",
+                DATA[i % 10000],
+            )
+
+
+def populate_table_pyro_sync(conn, n):
+    """Populate temp table with n rows"""
+    for i in range(n):
+        conn.exec_drop(
+            "INSERT INTO benchmark_test (name, age, email, score, description) VALUES ($1, $2, $3, $4, $5)",
+            DATA[i % 10000],
+        )
+
+
+def populate_table_psycopg_sync(conn, n):
+    """Populate temp table with n rows"""
+    with conn.cursor() as cursor:
+        for i in range(n):
+            cursor.execute(
+                "INSERT INTO benchmark_test (name, age, email, score, description) VALUES (%s, %s, %s, %s, %s)",
+                DATA[i % 10000],
+            )
+
+
+async def clear_table_pyro_async(conn):
+    await conn.exec_drop("TRUNCATE TABLE benchmark_test RESTART IDENTITY")
+
+
+async def clear_table_asyncpg(conn):
+    await conn.execute("TRUNCATE TABLE benchmark_test RESTART IDENTITY")
+
+
+async def clear_table_psycopg_async(conn):
+    async with conn.cursor() as cursor:
+        await cursor.execute("TRUNCATE TABLE benchmark_test RESTART IDENTITY")
+
+
+def clear_table_pyro_sync(conn):
+    conn.exec_drop("TRUNCATE TABLE benchmark_test RESTART IDENTITY")
+
+
+def clear_table_psycopg_sync(conn):
+    with conn.cursor() as cursor:
+        cursor.execute("TRUNCATE TABLE benchmark_test RESTART IDENTITY")
 
 
 # --- Insert ------------------------------------------------------------------
