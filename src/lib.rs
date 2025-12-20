@@ -21,6 +21,7 @@ use crate::{
     r#async::{conn::AsyncConn, transaction::AsyncTransaction},
     sync::{conn::SyncConn, transaction::SyncTransaction},
     util::PyroFuture,
+    value::{PyJson, PyJsonb},
 };
 
 #[pyfunction]
@@ -53,6 +54,12 @@ mod pyro_postgres {
 
     #[pymodule_export]
     use super::PyroFuture;
+
+    #[pymodule_export]
+    use super::PyJson;
+
+    #[pymodule_export]
+    use super::PyJsonb;
 
     #[pymodule]
     mod error {
@@ -120,6 +127,8 @@ mod pyro_postgres {
             m.add("AsyncTransaction", py.get_type::<AsyncTransaction>())?;
             m.add("SyncConn", py.get_type::<SyncConn>())?;
             m.add("SyncTransaction", py.get_type::<SyncTransaction>())?;
+            m.add("Json", py.get_type::<PyJson>())?;
+            m.add("Jsonb", py.get_type::<PyJsonb>())?;
             PyResult::Ok(())
         })?;
 

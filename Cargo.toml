@@ -19,6 +19,7 @@ pyo3-log = "0.13.2"
 log = "0.4"
 tokio = { version = "1", features = ["rt", "net", "io-util", "sync"] }
 zero-postgres = { path = "../zero-postgres", features = ["tokio", "sync"] }
+time = "0.3"
 parking_lot = "0.12"
 thiserror = "2"
 either = "1"

@@ -7,6 +7,68 @@ use pyo3::{
 
 use crate::py_imports::get_json_module;
 
+/// Python wrapper for JSON data.
+/// Use this to explicitly send data as JSON type.
+#[pyclass(name = "Json")]
+#[derive(Clone)]
+pub struct PyJson {
+    pub data: String,
+}
+
+#[pymethods]
+impl PyJson {
+    #[new]
+    fn new(data: Bound<'_, PyAny>) -> PyResult<Self> {
+        let py = data.py();
+        // If it's already a string, use it directly
+        if data.is_instance_of::<pyo3::types::PyString>() {
+            let s = data.extract::<String>()?;
+            Ok(Self { data: s })
+        } else {
+            // Serialize to JSON
+            let json_module = get_json_module(py)?;
+            let json_str = json_module.call_method1("dumps", (&data,))?;
+            let s = json_str.extract::<String>()?;
+            Ok(Self { data: s })
+        }
+    }
+
+    fn __repr__(&self) -> String {
+        format!("Json({})", self.data)
+    }
+}
+
+/// Python wrapper for JSONB data.
+/// Use this to explicitly send data as JSONB type.
+#[pyclass(name = "Jsonb")]
+#[derive(Clone)]
+pub struct PyJsonb {
+    pub data: String,
+}
+
+#[pymethods]
+impl PyJsonb {
+    #[new]
+    fn new(data: Bound<'_, PyAny>) -> PyResult<Self> {
+        let py = data.py();
+        // If it's already a string, use it directly
+        if data.is_instance_of::<pyo3::types::PyString>() {
+            let s = data.extract::<String>()?;
+            Ok(Self { data: s })
+        } else {
+            // Serialize to JSON
+            let json_module = get_json_module(py)?;
+            let json_str = json_module.call_method1("dumps", (&data,))?;
+            let s = json_str.extract::<String>()?;
+            Ok(Self { data: s })
+        }
+    }
+
+    fn __repr__(&self) -> String {
+        format!("Jsonb({})", self.data)
+    }
+}
+
 /// Zero-copy `PostgreSQL` value type using `PyBackedStr` and `PyBackedBytes`
 ///
 /// This enum is similar to the pyro-mysql Value but uses `PyO3`'s zero-copy types
@@ -19,6 +81,9 @@ use crate::py_imports::get_json_module;
 pub enum Value {
     /// NULL value
     NULL,
+
+    /// Boolean value
+    Bool(bool),
 
     /// Byte data (zero-copy from Python bytes/bytearray)
     Bytes(PyBackedBytes),
@@ -49,6 +114,18 @@ pub enum Value {
 
     /// Interval/Duration: months, days, microseconds
     Interval(i32, i32, i64),
+
+    /// UUID as 128-bit integer
+    Uuid(u128),
+
+    /// JSON data (text format, OID 114)
+    Json(String),
+
+    /// JSONB data (binary format with version byte, OID 3802)
+    Jsonb(String),
+
+    /// Decimal/Numeric data (stored as string for lossless encoding)
+    Decimal(PyBackedStr),
 }
 
 impl FromPyObject<'_, '_> for Value {
@@ -67,7 +144,7 @@ impl FromPyObject<'_, '_> for Value {
 
             "bool" => {
                 let v = ob.extract::<bool>()?;
-                Ok(Value::Int(i64::from(v)))
+                Ok(Value::Bool(v))
             }
 
             "int" => {
@@ -166,15 +243,27 @@ impl FromPyObject<'_, '_> for Value {
             }
 
             "Decimal" => {
-                // decimal.Decimal - convert to zero-copy string
+                // decimal.Decimal - store as string for lossless encoding
                 let decimal_str = ob.str()?.extract::<PyBackedStr>()?;
-                Ok(Value::Str(decimal_str))
+                Ok(Value::Decimal(decimal_str))
             }
 
             "UUID" => {
-                // uuid.UUID - convert to string representation
-                let uuid_str = ob.str()?.extract::<PyBackedStr>()?;
-                Ok(Value::Str(uuid_str))
+                // uuid.UUID - get the 128-bit integer value
+                let int_val = ob.getattr("int")?.extract::<u128>()?;
+                Ok(Value::Uuid(int_val))
+            }
+
+            "Json" => {
+                // Our PyJson wrapper type
+                let json = ob.extract::<PyJson>()?;
+                Ok(Value::Json(json.data))
+            }
+
+            "Jsonb" => {
+                // Our PyJsonb wrapper type
+                let jsonb = ob.extract::<PyJsonb>()?;
+                Ok(Value::Jsonb(jsonb.data))
             }
 
             _ => Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(format!(

@@ -3,10 +3,17 @@
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyString};
 use pyo3::IntoPyObjectExt;
+use time::{Date, Month};
 
 use crate::py_imports::{
     get_date_class, get_datetime_class, get_decimal_class, get_time_class, get_timedelta_class,
     get_uuid_class,
+};
+
+/// PostgreSQL epoch (2000-01-01)
+const PG_EPOCH: Date = match Date::from_calendar_date(2000, Month::January, 1) {
+    Ok(d) => d,
+    Err(_) => unreachable!(),
 };
 
 // PostgreSQL OIDs for common types
@@ -459,22 +466,9 @@ fn parse_interval(s: &str) -> PyResult<(i32, i32, i32)> {
 
 /// Convert days since `PostgreSQL` epoch (2000-01-01) to (year, month, day)
 fn days_since_pg_epoch_to_ymd(days: i32) -> (i32, u32, u32) {
-    // PostgreSQL epoch is 2000-01-01 which is day 730120 in Julian calendar
-    let julian = days + 2_451_545; // J2000 epoch
-
-    // Algorithm from Howard Hinnant
-    let z = julian;
-    let era = if z >= 0 { z } else { z - 146_096 } / 146_097;
-    let doe = z - era * 146_097;
-    let yoe = (doe - doe / 1460 + doe / 36524 - doe / 146_096) / 365;
-    let y = yoe + era * 400;
-    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
-    let mp = (5 * doy + 2) / 153;
-    let d = doy - (153 * mp + 2) / 5 + 1;
-    let m = if mp < 10 { mp + 3 } else { mp - 9 };
-    let year = if m <= 2 { y + 1 } else { y };
-
-    (year, m as u32, d as u32)
+    let julian_day = PG_EPOCH.to_julian_day() + days;
+    let date = Date::from_julian_day(julian_day).unwrap_or(PG_EPOCH);
+    (date.year(), date.month() as u32, date.day() as u32)
 }
 
 /// Convert microseconds since midnight to (hour, minute, second, microsecond)
