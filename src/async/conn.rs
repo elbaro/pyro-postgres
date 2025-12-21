@@ -10,6 +10,7 @@ use zero_postgres::state::extended::PreparedStatement;
 use zero_postgres::tokio::Conn;
 
 use crate::r#async::handler::{DictHandler, DropHandler, TupleHandler};
+use crate::r#async::pipeline::AsyncPipeline;
 use crate::r#async::transaction::AsyncTransaction;
 use crate::error::{Error, PyroResult};
 use crate::isolation_level::IsolationLevel;
@@ -66,6 +67,21 @@ impl AsyncConn {
     ) -> AsyncTransaction {
         let isolation_level_str: Option<String> = isolation_level.map(|l| l.as_str().to_string());
         AsyncTransaction::new(slf, isolation_level_str, readonly)
+    }
+
+    /// Create a pipeline for batching multiple queries.
+    ///
+    /// Use as an async context manager:
+    /// ```python
+    /// async with conn.pipeline() as p:
+    ///     t1 = await p.exec("SELECT $1::int", (1,))
+    ///     t2 = await p.exec("SELECT $1::int", (2,))
+    ///     await p.sync()
+    ///     result1 = await p.claim_one(t1)
+    ///     result2 = await p.claim_collect(t2)
+    /// ```
+    fn pipeline(slf: Py<Self>) -> AsyncPipeline {
+        AsyncPipeline::new(slf)
     }
 
     fn id(&self, py: Python<'_>) -> PyResult<Py<PyroFuture>> {

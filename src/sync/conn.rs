@@ -12,6 +12,7 @@ use crate::isolation_level::IsolationLevel;
 use crate::opts::resolve_opts;
 use crate::params::Params;
 use crate::sync::handler::{DictHandler, DropHandler, TupleHandler};
+use crate::sync::pipeline::SyncPipeline;
 use crate::sync::transaction::SyncTransaction;
 use crate::zero_params_adapter::ParamsAdapter;
 
@@ -47,6 +48,21 @@ impl SyncConn {
     ) -> SyncTransaction {
         let isolation_level_str: Option<String> = isolation_level.map(|l| l.as_str().to_string());
         SyncTransaction::new(slf, isolation_level_str, readonly)
+    }
+
+    /// Create a pipeline for batching multiple queries.
+    ///
+    /// Use as a context manager:
+    /// ```python
+    /// with conn.pipeline() as p:
+    ///     t1 = p.exec("SELECT $1::int", (1,))
+    ///     t2 = p.exec("SELECT $1::int", (2,))
+    ///     p.sync()
+    ///     result1 = p.claim_one(t1)
+    ///     result2 = p.claim_collect(t2)
+    /// ```
+    fn pipeline(slf: Py<Self>) -> SyncPipeline {
+        SyncPipeline::new(slf)
     }
 
     fn id(&self) -> PyroResult<u32> {

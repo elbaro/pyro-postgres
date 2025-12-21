@@ -18,8 +18,8 @@ use pyo3::prelude::*;
 use crate::{
     isolation_level::IsolationLevel,
     opts::Opts,
-    r#async::{conn::AsyncConn, transaction::AsyncTransaction},
-    sync::{conn::SyncConn, transaction::SyncTransaction},
+    r#async::{conn::AsyncConn, pipeline::AsyncPipeline, pipeline::PyTicket as AsyncPyTicket, transaction::AsyncTransaction},
+    sync::{conn::SyncConn, pipeline::PyTicket, pipeline::SyncPipeline, transaction::SyncTransaction},
     util::PyroFuture,
     value::{PyJson, PyJsonb},
 };
@@ -96,6 +96,12 @@ mod pyro_postgres {
         use crate::r#async::conn::AsyncConn;
 
         #[pymodule_export]
+        use crate::r#async::pipeline::AsyncPipeline;
+
+        #[pymodule_export]
+        use crate::r#async::pipeline::PyTicket;
+
+        #[pymodule_export]
         use crate::r#async::transaction::AsyncTransaction;
     }
 
@@ -103,6 +109,12 @@ mod pyro_postgres {
     mod sync {
         #[pymodule_export]
         use crate::sync::conn::SyncConn;
+
+        #[pymodule_export]
+        use crate::sync::pipeline::PyTicket;
+
+        #[pymodule_export]
+        use crate::sync::pipeline::SyncPipeline;
 
         #[pymodule_export]
         use crate::sync::transaction::SyncTransaction;
@@ -124,8 +136,12 @@ mod pyro_postgres {
         Python::attach(|py| {
             m.add("Opts", py.get_type::<Opts>())?;
             m.add("AsyncConn", py.get_type::<AsyncConn>())?;
+            m.add("AsyncPipeline", py.get_type::<AsyncPipeline>())?;
+            m.add("AsyncTicket", py.get_type::<AsyncPyTicket>())?;
             m.add("AsyncTransaction", py.get_type::<AsyncTransaction>())?;
             m.add("SyncConn", py.get_type::<SyncConn>())?;
+            m.add("SyncPipeline", py.get_type::<SyncPipeline>())?;
+            m.add("SyncTicket", py.get_type::<PyTicket>())?;
             m.add("SyncTransaction", py.get_type::<SyncTransaction>())?;
             m.add("Json", py.get_type::<PyJson>())?;
             m.add("Jsonb", py.get_type::<PyJsonb>())?;
