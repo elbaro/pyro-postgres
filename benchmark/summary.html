@@ -194,11 +194,12 @@
         </div>
 
         <script>
-            // Sync Chart
-            const syncCtx = document
-                .getElementById("syncChart")
-                .getContext("2d");
-            new Chart(syncCtx, {
+            function initCharts() {
+                // Sync Chart
+                const syncCtx = document
+                    .getElementById("syncChart")
+                    .getContext("2d");
+                new Chart(syncCtx, {
                 type: "bar",
                 data: {
                     labels: [
@@ -334,6 +335,14 @@
                     },
                 },
             });
+            }
+
+            // Wait for Chart.js to load (handles htmlpreview.github.io timing issues)
+            if (typeof Chart !== 'undefined') {
+                initCharts();
+            } else {
+                window.addEventListener('load', initCharts);
+            }
         </script>
     </body>
 </html>
