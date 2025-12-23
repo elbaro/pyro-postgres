@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 320">
+  <style>
+    .title { font: bold 14px sans-serif; fill: #333; }
+    .label { font: 11px sans-serif; fill: #666; }
+    .value { font: 10px sans-serif; fill: #333; }
+    .axis { font: 10px sans-serif; fill: #666; }
+    .legend { font: 11px sans-serif; fill: #333; }
+    .grid { stroke: #e0e0e0; stroke-width: 1; }
+  </style>
+
+  <!-- Background -->
+  <rect width="600" height="320" fill="#fafafa" rx="8"/>
+
+  <!-- Title -->
+  <text x="300" y="25" text-anchor="middle" class="title">Sync Benchmark - Execution Time (lower is better)</text>
+
+  <!-- Legend -->
+  <rect x="180" y="40" width="12" height="12" fill="#4CAF50" rx="2"/>
+  <text x="197" y="50" class="legend">pyro-postgres</text>
+  <rect x="310" y="40" width="12" height="12" fill="#2196F3" rx="2"/>
+  <text x="327" y="50" class="legend">psycopg</text>
+
+  <!-- Chart area: x=80, y=70, width=480, height=200 -->
+  <!-- Grid lines -->
+  <line x1="80" y1="270" x2="560" y2="270" class="grid"/>
+  <line x1="80" y1="220" x2="560" y2="220" class="grid"/>
+  <line x1="80" y1="170" x2="560" y2="170" class="grid"/>
+  <line x1="80" y1="120" x2="560" y2="120" class="grid"/>
+  <line x1="80" y1="70" x2="560" y2="70" class="grid"/>
+
+  <!-- Y-axis labels (max ~850) -->
+  <text x="75" y="274" text-anchor="end" class="axis">0</text>
+  <text x="75" y="224" text-anchor="end" class="axis">200</text>
+  <text x="75" y="174" text-anchor="end" class="axis">400</text>
+  <text x="75" y="124" text-anchor="end" class="axis">600</text>
+  <text x="75" y="74" text-anchor="end" class="axis">800</text>
+
+  <!-- Y-axis title -->
+  <text x="20" y="170" text-anchor="middle" class="label" transform="rotate(-90, 20, 170)">Time (us)</text>
+
+  <!-- Bars - 5 groups, each group width=96, bar width=35, gap between bars=10 -->
+  <!-- SELECT_1: pyro=39.22, psycopg=103.92 (scale: 200px per 800us = 0.25px per us) -->
+  <g>
+    <rect x="95" y="260.2" width="35" height="9.8" fill="#4CAF50" rx="2"/>
+    <rect x="140" y="244" width="35" height="26" fill="#2196F3" rx="2"/>
+    <text x="130" y="290" text-anchor="middle" class="label">SELECT_1</text>
+    <text x="112" y="256" text-anchor="middle" class="value">39</text>
+    <text x="157" y="240" text-anchor="middle" class="value">104</text>
+  </g>
+
+  <!-- SELECT_10: pyro=46.46, psycopg=113.17 -->
+  <g>
+    <rect x="191" y="258.4" width="35" height="11.6" fill="#4CAF50" rx="2"/>
+    <rect x="236" y="241.7" width="35" height="28.3" fill="#2196F3" rx="2"/>
+    <text x="226" y="290" text-anchor="middle" class="label">SELECT_10</text>
+    <text x="208" y="254" text-anchor="middle" class="value">46</text>
+    <text x="253" y="237" text-anchor="middle" class="value">113</text>
+  </g>
+
+  <!-- SELECT_100: pyro=112.13, psycopg=177.76 -->
+  <g>
+    <rect x="287" y="242" width="35" height="28" fill="#4CAF50" rx="2"/>
+    <rect x="332" y="225.6" width="35" height="44.4" fill="#2196F3" rx="2"/>
+    <text x="322" y="290" text-anchor="middle" class="label">SELECT_100</text>
+    <text x="304" y="238" text-anchor="middle" class="value">112</text>
+    <text x="349" y="221" text-anchor="middle" class="value">178</text>
+  </g>
+
+  <!-- SELECT_1000: pyro=569.89, psycopg=810.31 -->
+  <g>
+    <rect x="383" y="127.5" width="35" height="142.5" fill="#4CAF50" rx="2"/>
+    <rect x="428" y="67.4" width="35" height="202.6" fill="#2196F3" rx="2"/>
+    <text x="418" y="290" text-anchor="middle" class="label">SELECT_1000</text>
+    <text x="400" y="123" text-anchor="middle" class="value">570</text>
+    <text x="445" y="63" text-anchor="middle" class="value">810</text>
+  </g>
+
+  <!-- INSERT: pyro=6.42, psycopg=19.52 -->
+  <g>
+    <rect x="479" y="268.4" width="35" height="1.6" fill="#4CAF50" rx="2"/>
+    <rect x="524" y="265.1" width="35" height="4.9" fill="#2196F3" rx="2"/>
+    <text x="514" y="290" text-anchor="middle" class="label">INSERT</text>
+    <text x="496" y="264" text-anchor="middle" class="value">6</text>
+    <text x="541" y="261" text-anchor="middle" class="value">20</text>
+  </g>
+
+  <!-- Speedup annotations -->
+  <text x="130" y="307" text-anchor="middle" class="value" fill="#4CAF50">2.7x faster</text>
+  <text x="226" y="307" text-anchor="middle" class="value" fill="#4CAF50">2.4x faster</text>
+  <text x="322" y="307" text-anchor="middle" class="value" fill="#4CAF50">1.6x faster</text>
+  <text x="418" y="307" text-anchor="middle" class="value" fill="#4CAF50">1.4x faster</text>
+  <text x="514" y="307" text-anchor="middle" class="value" fill="#4CAF50">3.0x faster</text>
+</svg>
