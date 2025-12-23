@@ -260,9 +260,7 @@ class TestAsyncTransactionReadOnly:
         await setup_test_table_async(conn)
 
         # Insert data first
-        await conn.query_drop(
-            "INSERT INTO test_table (name, age) VALUES ('Alice', 30)"
-        )
+        await conn.query_drop("INSERT INTO test_table (name, age) VALUES ('Alice', 30)")
 
         async with conn.start_transaction(readonly=True):
             # Reading should work
@@ -295,9 +293,7 @@ class TestAsyncTransactionReadOnly:
         conn = await Conn.new(get_test_db_url())
         await setup_test_table_async(conn)
 
-        await conn.query_drop(
-            "INSERT INTO test_table (name, age) VALUES ('Alice', 30)"
-        )
+        await conn.query_drop("INSERT INTO test_table (name, age) VALUES ('Alice', 30)")
 
         async with conn.start_transaction(
             isolation_level=IsolationLevel.Serializable, readonly=True

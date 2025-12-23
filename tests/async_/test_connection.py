@@ -126,12 +126,7 @@ class TestAsyncOpts:
     async def test_opts_builder_chain(self):
         """Test Opts builder pattern with chaining for async connection."""
         opts = (
-            Opts()
-            .host("localhost")
-            .port(5432)
-            .user("test")
-            .password("1234")
-            .db("test")
+            Opts().host("localhost").port(5432).user("test").password("1234").db("test")
         )
         conn = await Conn.new(opts)
         result = await conn.query_first("SELECT 1")

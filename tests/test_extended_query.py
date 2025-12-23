@@ -60,15 +60,11 @@ def test_sync_exec_first():
         ("Bob", 25),
     )
 
-    result = conn.exec_first(
-        "SELECT name, age FROM test_table ORDER BY age DESC", ()
-    )
+    result = conn.exec_first("SELECT name, age FROM test_table ORDER BY age DESC", ())
     assert result
     assert (result[0], result[1]) == ("Alice", 30)
 
-    result = conn.exec_first(
-        "SELECT name, age FROM test_table WHERE age > $1", (100,)
-    )
+    result = conn.exec_first("SELECT name, age FROM test_table WHERE age > $1", (100,))
     assert result is None
 
     cleanup_test_table_sync(conn)
@@ -273,15 +269,11 @@ async def test_async_exec_with_params():
         ("Bob", 25),
     )
 
-    results = await conn.exec(
-        "SELECT name, age FROM test_table WHERE age > $1", (20,)
-    )
+    results = await conn.exec("SELECT name, age FROM test_table WHERE age > $1", (20,))
 
     assert len(results) == 2
 
-    results = await conn.exec(
-        "SELECT name, age FROM test_table WHERE age = $1", (25,)
-    )
+    results = await conn.exec("SELECT name, age FROM test_table WHERE age = $1", (25,))
 
     assert len(results) == 1
     assert (results[0][0], results[0][1]) == ("Bob", 25)
@@ -357,9 +349,7 @@ async def test_async_exec_batch():
         ("Eve", 28),
     ]
 
-    await conn.exec_batch(
-        "INSERT INTO test_table (name, age) VALUES ($1, $2)", params
-    )
+    await conn.exec_batch("INSERT INTO test_table (name, age) VALUES ($1, $2)", params)
 
     count = await conn.query_first("SELECT COUNT(*) FROM test_table")
     assert count
@@ -474,9 +464,7 @@ async def test_async_exec_affected_rows():
     affected_rows = await conn.affected_rows()
     assert affected_rows == 3
 
-    await conn.exec_drop(
-        "UPDATE test_table SET age = age + 1 WHERE age > $1", (25,)
-    )
+    await conn.exec_drop("UPDATE test_table SET age = age + 1 WHERE age > $1", (25,))
 
     affected_rows = await conn.affected_rows()
     assert affected_rows == 2

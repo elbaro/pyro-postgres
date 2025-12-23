@@ -232,9 +232,7 @@ class TestAsyncExecDrop:
             ("Alice", 30),
         )
         await conn.exec_drop("DELETE FROM test_table WHERE name = $1", ("Alice",))
-        result = await conn.query_first(
-            "SELECT * FROM test_table WHERE name = 'Alice'"
-        )
+        result = await conn.query_first("SELECT * FROM test_table WHERE name = 'Alice'")
         assert result is None
         await cleanup_test_table_async(conn)
         await conn.close()
@@ -269,9 +267,7 @@ class TestAsyncExecBatch:
         """Test batch with empty params list."""
         conn = await Conn.new(get_test_db_url())
         await setup_test_table_async(conn)
-        await conn.exec_batch(
-            "INSERT INTO test_table (name, age) VALUES ($1, $2)", []
-        )
+        await conn.exec_batch("INSERT INTO test_table (name, age) VALUES ($1, $2)", [])
         count = await conn.query_first("SELECT COUNT(*) FROM test_table")
         assert count[0] == 0
         await cleanup_test_table_async(conn)

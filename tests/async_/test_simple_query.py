@@ -199,9 +199,7 @@ class TestAsyncQueryDrop:
         await setup_test_table_async(conn)
         await conn.query_drop("INSERT INTO test_table (name, age) VALUES ('Alice', 30)")
         await conn.query_drop("DELETE FROM test_table WHERE name = 'Alice'")
-        result = await conn.query_first(
-            "SELECT * FROM test_table WHERE name = 'Alice'"
-        )
+        result = await conn.query_first("SELECT * FROM test_table WHERE name = 'Alice'")
         assert result is None
         await cleanup_test_table_async(conn)
         await conn.close()

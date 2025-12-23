@@ -284,7 +284,9 @@ class TestSyncNumericTypes:
     def test_numeric_high_precision(self):
         """Test NUMERIC with high precision."""
         conn = Conn(get_test_db_url())
-        result = conn.query_first("SELECT 12345678901234567890.12345678901234567890::numeric")
+        result = conn.query_first(
+            "SELECT 12345678901234567890.12345678901234567890::numeric"
+        )
         assert isinstance(result[0], Decimal)
         conn.close()
 
@@ -303,9 +305,7 @@ class TestSyncUUIDType:
     def test_uuid(self):
         """Test UUID type."""
         conn = Conn(get_test_db_url())
-        result = conn.query_first(
-            "SELECT 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'::uuid"
-        )
+        result = conn.query_first("SELECT 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'::uuid")
         assert result[0] == UUID("a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11")
         conn.close()
 
@@ -324,7 +324,7 @@ class TestSyncJSONTypes:
     def test_json(self):
         """Test JSON type returns string."""
         conn = Conn(get_test_db_url())
-        result = conn.query_first("SELECT '{\"key\": \"value\"}'::json")
+        result = conn.query_first('SELECT \'{"key": "value"}\'::json')
         assert isinstance(result[0], str)
         assert "key" in result[0]
         conn.close()
@@ -332,7 +332,7 @@ class TestSyncJSONTypes:
     def test_jsonb(self):
         """Test JSONB type returns string."""
         conn = Conn(get_test_db_url())
-        result = conn.query_first("SELECT '{\"key\": \"value\"}'::jsonb")
+        result = conn.query_first('SELECT \'{"key": "value"}\'::jsonb')
         assert isinstance(result[0], str)
         assert "key" in result[0]
         conn.close()

@@ -107,12 +107,7 @@ class TestSyncOpts:
     def test_opts_builder_chain(self):
         """Test Opts builder pattern with chaining."""
         opts = (
-            Opts()
-            .host("localhost")
-            .port(5432)
-            .user("test")
-            .password("1234")
-            .db("test")
+            Opts().host("localhost").port(5432).user("test").password("1234").db("test")
         )
         conn = Conn(opts)
         result = conn.query_first("SELECT 1")

@@ -287,12 +287,8 @@ class TestSyncPreparedStatementCaching:
             "INSERT INTO test_table (name, age) VALUES ($1, $2)",
             ("Alice", 30),
         )
-        results1 = conn.exec(
-            "SELECT name FROM test_table WHERE age = $1", (30,)
-        )
-        results2 = conn.exec(
-            "SELECT age FROM test_table WHERE name = $1", ("Alice",)
-        )
+        results1 = conn.exec("SELECT name FROM test_table WHERE age = $1", (30,))
+        results2 = conn.exec("SELECT age FROM test_table WHERE name = $1", ("Alice",))
         assert len(results1) == 1
         assert results1[0][0] == "Alice"
         assert len(results2) == 1

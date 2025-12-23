@@ -39,7 +39,9 @@ class TestSyncTransactionContextManager:
 
         try:
             with conn.start_transaction() as txn:
-                conn.query_drop("INSERT INTO test_table (name, age) VALUES ('Alice', 30)")
+                conn.query_drop(
+                    "INSERT INTO test_table (name, age) VALUES ('Alice', 30)"
+                )
                 raise ValueError("Simulated error")
         except ValueError:
             pass

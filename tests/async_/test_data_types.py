@@ -367,7 +367,7 @@ class TestAsyncJSONTypes:
     async def test_json(self):
         """Test JSON type returns string."""
         conn = await Conn.new(get_test_db_url())
-        result = await conn.query_first("SELECT '{\"key\": \"value\"}'::json")
+        result = await conn.query_first('SELECT \'{"key": "value"}\'::json')
         assert isinstance(result[0], str)
         assert "key" in result[0]
         await conn.close()
@@ -376,7 +376,7 @@ class TestAsyncJSONTypes:
     async def test_jsonb(self):
         """Test JSONB type returns string."""
         conn = await Conn.new(get_test_db_url())
-        result = await conn.query_first("SELECT '{\"key\": \"value\"}'::jsonb")
+        result = await conn.query_first('SELECT \'{"key": "value"}\'::jsonb')
         assert isinstance(result[0], str)
         assert "key" in result[0]
         await conn.close()

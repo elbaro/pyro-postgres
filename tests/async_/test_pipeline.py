@@ -68,7 +68,9 @@ class TestAsyncPipelineBasic:
             await p.sync()
             await p.claim_drop(t1)
         # Verify the insert happened
-        result = await conn.query_first("SELECT name FROM test_table WHERE name = 'Alice'")
+        result = await conn.query_first(
+            "SELECT name FROM test_table WHERE name = 'Alice'"
+        )
         assert result is not None
         assert result[0] == "Alice"
         await cleanup_test_table_async(conn)
