@@ -18,9 +18,9 @@ pub mod zero_params_adapter;
 use pyo3::prelude::*;
 
 use crate::{
+    r#async::{conn::AsyncConn, pipeline::AsyncPipeline, transaction::AsyncTransaction},
     isolation_level::IsolationLevel,
     opts::Opts,
-    r#async::{conn::AsyncConn, pipeline::AsyncPipeline, transaction::AsyncTransaction},
     statement::Statement,
     sync::{conn::SyncConn, pipeline::SyncPipeline, transaction::SyncTransaction},
     ticket::PyTicket,

@@ -1,9 +1,9 @@
 use std::future::Future;
 
+use pyo3::IntoPyObjectExt;
 use pyo3::intern;
 use pyo3::prelude::*;
 use pyo3::types::PyTuple;
-use pyo3::IntoPyObjectExt;
 
 use crate::error::PyroResult;
 
@@ -76,7 +76,9 @@ where
                             .call1(
                                 py,
                                 (
-                                    bound_future.getattr(intern!(py, "set_result")).expect("set_result"),
+                                    bound_future
+                                        .getattr(intern!(py, "set_result"))
+                                        .expect("set_result"),
                                     value.into_py_any(py).expect("into_py_any"),
                                 ),
                             )
@@ -87,8 +89,12 @@ where
                             .call1(
                                 py,
                                 (
-                                    bound_future.getattr(intern!(py, "set_exception")).expect("set_exception"),
-                                    pyo3::PyErr::from(err).into_bound_py_any(py).expect("into_bound_py_any"),
+                                    bound_future
+                                        .getattr(intern!(py, "set_exception"))
+                                        .expect("set_exception"),
+                                    pyo3::PyErr::from(err)
+                                        .into_bound_py_any(py)
+                                        .expect("into_bound_py_any"),
                                 ),
                             )
                             .expect("call_soon_threadsafe");

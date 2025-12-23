@@ -5,7 +5,7 @@ use pyo3::prelude::*;
 use crate::r#async::conn::AsyncConn;
 use crate::r#async::handler::DropHandler;
 use crate::error::Error;
-use crate::util::{rust_future_into_py, PyroFuture};
+use crate::util::{PyroFuture, rust_future_into_py};
 
 #[pyclass(module = "pyro_postgres.async_", name = "Transaction")]
 pub struct AsyncTransaction {

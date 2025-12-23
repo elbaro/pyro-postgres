@@ -129,7 +129,7 @@ impl Opts {
             _ => {
                 return Err(Error::IncorrectApiUsageError(
                     "Invalid ssl_mode. Use: disable, prefer, require",
-                ))
+                ));
             }
         };
         Ok(self_)
@@ -171,7 +171,10 @@ impl Opts {
 }
 
 /// Helper to convert either a String URL or Opts object to `zero_postgres::Opts`
-pub fn resolve_opts(_py: Python<'_>, url_or_opts: &Bound<'_, PyAny>) -> PyroResult<zero_postgres::Opts> {
+pub fn resolve_opts(
+    _py: Python<'_>,
+    url_or_opts: &Bound<'_, PyAny>,
+) -> PyroResult<zero_postgres::Opts> {
     // Try to extract as string first
     if let Ok(url) = url_or_opts.extract::<String>() {
         let inner: zero_postgres::Opts = url.as_str().try_into()?;

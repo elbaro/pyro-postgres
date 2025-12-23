@@ -2,19 +2,19 @@ use std::sync::Arc;
 
 use either::Either;
 use parking_lot::Mutex;
-use pyo3::pybacked::PyBackedStr;
 use pyo3::prelude::*;
+use pyo3::pybacked::PyBackedStr;
 use pyo3::types::{PyDict, PyTuple};
 use tokio::sync::OwnedMutexGuard;
 use zero_postgres::tokio::{Conn, Pipeline};
 
-use crate::error::Error;
-use crate::params::Params;
 use crate::r#async::conn::AsyncConn;
 use crate::r#async::handler::{DictHandler, DropHandler, TupleHandler};
+use crate::error::Error;
+use crate::params::Params;
 use crate::statement::Statement;
 use crate::ticket::PyTicket;
-use crate::util::{rust_future_into_py, PyroFuture};
+use crate::util::{PyroFuture, rust_future_into_py};
 use crate::zero_params_adapter::ParamsAdapter;
 
 /// Async pipeline mode for batching multiple queries.
@@ -335,12 +335,7 @@ impl AsyncPipeline {
     ///
     /// Results must be claimed in the same order they were queued.
     #[pyo3(signature = (ticket, *, as_dict=false))]
-    fn claim(
-        &self,
-        py: Python<'_>,
-        ticket: PyTicket,
-        as_dict: bool,
-    ) -> PyResult<Py<PyroFuture>> {
+    fn claim(&self, py: Python<'_>, ticket: PyTicket, as_dict: bool) -> PyResult<Py<PyroFuture>> {
         self.claim_collect(py, ticket, as_dict)
     }
 }

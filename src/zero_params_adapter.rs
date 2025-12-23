@@ -2,7 +2,7 @@
 
 use time::{Date, Month, Time};
 use zero_postgres::conversion::ToParams;
-use zero_postgres::protocol::types::{oid, Oid};
+use zero_postgres::protocol::types::{Oid, oid};
 
 use crate::params::Params;
 use crate::value::Value;
@@ -63,11 +63,7 @@ fn natural_oid(value: &Value) -> Oid {
 ///
 /// This function supports flexible encoding: an i64 can encode as INT2, INT4, or INT8
 /// depending on what the server expects (with overflow checking).
-fn encode_value(
-    value: &Value,
-    target_oid: Oid,
-    buf: &mut Vec<u8>,
-) -> zero_postgres::Result<()> {
+fn encode_value(value: &Value, target_oid: Oid, buf: &mut Vec<u8>) -> zero_postgres::Result<()> {
     match value {
         Value::NULL => {
             buf.extend_from_slice(&(-1_i32).to_be_bytes());
@@ -171,14 +167,14 @@ fn encode_bool(v: bool, target_oid: Oid, buf: &mut Vec<u8>) -> zero_postgres::Re
 fn encode_int(v: i64, target_oid: Oid, buf: &mut Vec<u8>) -> zero_postgres::Result<()> {
     match target_oid {
         oid::INT2 => {
-            let v16 = i16::try_from(v)
-                .map_err(|_| zero_postgres::Error::overflow("i64", "INT2"))?;
+            let v16 =
+                i16::try_from(v).map_err(|_| zero_postgres::Error::overflow("i64", "INT2"))?;
             buf.extend_from_slice(&2_i32.to_be_bytes());
             buf.extend_from_slice(&v16.to_be_bytes());
         }
         oid::INT4 => {
-            let v32 = i32::try_from(v)
-                .map_err(|_| zero_postgres::Error::overflow("i64", "INT4"))?;
+            let v32 =
+                i32::try_from(v).map_err(|_| zero_postgres::Error::overflow("i64", "INT4"))?;
             buf.extend_from_slice(&4_i32.to_be_bytes());
             buf.extend_from_slice(&v32.to_be_bytes());
         }
@@ -198,21 +194,21 @@ fn encode_int(v: i64, target_oid: Oid, buf: &mut Vec<u8>) -> zero_postgres::Resu
 fn encode_uint(v: u64, target_oid: Oid, buf: &mut Vec<u8>) -> zero_postgres::Result<()> {
     match target_oid {
         oid::INT2 => {
-            let v16 = i16::try_from(v)
-                .map_err(|_| zero_postgres::Error::overflow("u64", "INT2"))?;
+            let v16 =
+                i16::try_from(v).map_err(|_| zero_postgres::Error::overflow("u64", "INT2"))?;
             buf.extend_from_slice(&2_i32.to_be_bytes());
             buf.extend_from_slice(&v16.to_be_bytes());
         }
         oid::INT4 => {
-            let v32 = i32::try_from(v)
-                .map_err(|_| zero_postgres::Error::overflow("u64", "INT4"))?;
+            let v32 =
+                i32::try_from(v).map_err(|_| zero_postgres::Error::overflow("u64", "INT4"))?;
             buf.extend_from_slice(&4_i32.to_be_bytes());
             buf.extend_from_slice(&v32.to_be_bytes());
         }
         oid::INT8 | 0 => {
             // INT8 or unknown (0) - convert to i64
-            let v64 = i64::try_from(v)
-                .map_err(|_| zero_postgres::Error::overflow("u64", "INT8"))?;
+            let v64 =
+                i64::try_from(v).map_err(|_| zero_postgres::Error::overflow("u64", "INT8"))?;
             buf.extend_from_slice(&8_i32.to_be_bytes());
             buf.extend_from_slice(&v64.to_be_bytes());
         }
@@ -347,7 +343,10 @@ fn encode_decimal(s: &str, target_oid: Oid, buf: &mut Vec<u8>) -> zero_postgres:
             buf.extend_from_slice(bytes);
             Ok(())
         }
-        _ => Err(zero_postgres::Error::type_mismatch(oid::NUMERIC, target_oid)),
+        _ => Err(zero_postgres::Error::type_mismatch(
+            oid::NUMERIC,
+            target_oid,
+        )),
     }
 }
 
@@ -367,9 +366,17 @@ fn days_since_pg_epoch(year: i32, month: u8, day: u8) -> zero_postgres::Result<i
 }
 
 /// Convert (hour, minute, second, microsecond) to microseconds since midnight
-fn micros_since_midnight(hour: u8, minute: u8, second: u8, micro: u32) -> zero_postgres::Result<i64> {
+fn micros_since_midnight(
+    hour: u8,
+    minute: u8,
+    second: u8,
+    micro: u32,
+) -> zero_postgres::Result<i64> {
     let time = Time::from_hms_micro(hour, minute, second, micro)
         .map_err(|e| zero_postgres::Error::InvalidUsage(format!("invalid time: {e}")))?;
     let (h, m, s, us) = time.as_hms_micro();
-    Ok(i64::from(h) * 3_600_000_000 + i64::from(m) * 60_000_000 + i64::from(s) * 1_000_000 + i64::from(us))
+    Ok(i64::from(h) * 3_600_000_000
+        + i64::from(m) * 60_000_000
+        + i64::from(s) * 1_000_000
+        + i64::from(us))
 }

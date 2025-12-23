@@ -17,7 +17,7 @@ use crate::isolation_level::IsolationLevel;
 use crate::opts::resolve_opts;
 use crate::params::Params;
 use crate::statement::Statement;
-use crate::util::{rust_future_into_py, PyroFuture};
+use crate::util::{PyroFuture, rust_future_into_py};
 use crate::zero_params_adapter::ParamsAdapter;
 
 #[pyclass(module = "pyro_postgres.async_", name = "Conn")]
@@ -42,10 +42,7 @@ impl AsyncConn {
     #[expect(clippy::new_ret_no_self)]
     #[staticmethod]
     #[pyo3(signature = (url_or_opts))]
-    pub fn new(
-        py: Python<'_>,
-        url_or_opts: &Bound<'_, PyAny>,
-    ) -> PyResult<Py<PyroFuture>> {
+    pub fn new(py: Python<'_>, url_or_opts: &Bound<'_, PyAny>) -> PyResult<Py<PyroFuture>> {
         let opts = resolve_opts(py, url_or_opts)?;
         rust_future_into_py(py, async move {
             let conn = Conn::new(opts).await?;
@@ -96,9 +93,7 @@ impl AsyncConn {
 
     fn affected_rows(&self, py: Python<'_>) -> PyResult<Py<PyroFuture>> {
         let affected_rows = self.affected_rows.clone();
-        rust_future_into_py(py, async move {
-            Ok(*affected_rows.lock().await)
-        })
+        rust_future_into_py(py, async move { Ok(*affected_rows.lock().await) })
     }
 
     fn close(&self, py: Python<'_>) -> PyResult<Py<PyroFuture>> {
@@ -137,12 +132,7 @@ impl AsyncConn {
     // ─── Simple Query Protocol (Text) ───────────────────────────────────────
 
     #[pyo3(signature = (query, *, as_dict=false))]
-    fn query(
-        &self,
-        py: Python<'_>,
-        query: String,
-        as_dict: bool,
-    ) -> PyResult<Py<PyroFuture>> {
+    fn query(&self, py: Python<'_>, query: String, as_dict: bool) -> PyResult<Py<PyroFuture>> {
         let inner = self.inner.clone();
         let tuple_handler = self.tuple_handler.clone();
         let dict_handler = self.dict_handler.clone();

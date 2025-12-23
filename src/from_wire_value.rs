@@ -1,8 +1,8 @@
 //! Convert `PostgreSQL` wire format values to Python objects.
 
+use pyo3::IntoPyObjectExt;
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyString};
-use pyo3::IntoPyObjectExt;
 use time::{Date, Month};
 
 use crate::py_imports::{
@@ -55,55 +55,46 @@ pub fn decode_text_to_python(py: Python<'_>, oid: u32, bytes: &[u8]) -> PyResult
         }
 
         OID_INT2 => {
-            let v: i16 = s
-                .parse()
-                .map_err(|e: std::num::ParseIntError| {
-                    pyo3::exceptions::PyValueError::new_err(e.to_string())
-                })?;
+            let v: i16 = s.parse().map_err(|e: std::num::ParseIntError| {
+                pyo3::exceptions::PyValueError::new_err(e.to_string())
+            })?;
             v.into_py_any(py)
         }
 
         OID_INT4 | OID_OID => {
-            let v: i32 = s
-                .parse()
-                .map_err(|e: std::num::ParseIntError| {
-                    pyo3::exceptions::PyValueError::new_err(e.to_string())
-                })?;
+            let v: i32 = s.parse().map_err(|e: std::num::ParseIntError| {
+                pyo3::exceptions::PyValueError::new_err(e.to_string())
+            })?;
             v.into_py_any(py)
         }
 
         OID_INT8 => {
-            let v: i64 = s
-                .parse()
-                .map_err(|e: std::num::ParseIntError| {
-                    pyo3::exceptions::PyValueError::new_err(e.to_string())
-                })?;
+            let v: i64 = s.parse().map_err(|e: std::num::ParseIntError| {
+                pyo3::exceptions::PyValueError::new_err(e.to_string())
+            })?;
             v.into_py_any(py)
         }
 
         OID_FLOAT4 => {
-            let v: f32 = s
-                .parse()
-                .map_err(|e: std::num::ParseFloatError| {
-                    pyo3::exceptions::PyValueError::new_err(e.to_string())
-                })?;
+            let v: f32 = s.parse().map_err(|e: std::num::ParseFloatError| {
+                pyo3::exceptions::PyValueError::new_err(e.to_string())
+            })?;
             // Convert via ryu to avoid precision loss
             let mut buffer = ryu::Buffer::new();
-            let f64_val: f64 = buffer
-                .format(v)
-                .parse()
-                .map_err(|e: std::num::ParseFloatError| {
-                    pyo3::exceptions::PyValueError::new_err(e.to_string())
-                })?;
+            let f64_val: f64 =
+                buffer
+                    .format(v)
+                    .parse()
+                    .map_err(|e: std::num::ParseFloatError| {
+                        pyo3::exceptions::PyValueError::new_err(e.to_string())
+                    })?;
             f64_val.into_py_any(py)
         }
 
         OID_FLOAT8 => {
-            let v: f64 = s
-                .parse()
-                .map_err(|e: std::num::ParseFloatError| {
-                    pyo3::exceptions::PyValueError::new_err(e.to_string())
-                })?;
+            let v: f64 = s.parse().map_err(|e: std::num::ParseFloatError| {
+                pyo3::exceptions::PyValueError::new_err(e.to_string())
+            })?;
             v.into_py_any(py)
         }
 
@@ -179,25 +170,25 @@ pub fn decode_binary_to_python(py: Python<'_>, oid: u32, bytes: &[u8]) -> PyResu
         }
 
         OID_INT2 => {
-            let arr: [u8; 2] = bytes.try_into().map_err(|_| {
-                pyo3::exceptions::PyValueError::new_err("Invalid INT2 binary data")
-            })?;
+            let arr: [u8; 2] = bytes
+                .try_into()
+                .map_err(|_| pyo3::exceptions::PyValueError::new_err("Invalid INT2 binary data"))?;
             let v = i16::from_be_bytes(arr);
             v.into_py_any(py)
         }
 
         OID_INT4 | OID_OID => {
-            let arr: [u8; 4] = bytes.try_into().map_err(|_| {
-                pyo3::exceptions::PyValueError::new_err("Invalid INT4 binary data")
-            })?;
+            let arr: [u8; 4] = bytes
+                .try_into()
+                .map_err(|_| pyo3::exceptions::PyValueError::new_err("Invalid INT4 binary data"))?;
             let v = i32::from_be_bytes(arr);
             v.into_py_any(py)
         }
 
         OID_INT8 => {
-            let arr: [u8; 8] = bytes.try_into().map_err(|_| {
-                pyo3::exceptions::PyValueError::new_err("Invalid INT8 binary data")
-            })?;
+            let arr: [u8; 8] = bytes
+                .try_into()
+                .map_err(|_| pyo3::exceptions::PyValueError::new_err("Invalid INT8 binary data"))?;
             let v = i64::from_be_bytes(arr);
             v.into_py_any(py)
         }
@@ -209,12 +200,13 @@ pub fn decode_binary_to_python(py: Python<'_>, oid: u32, bytes: &[u8]) -> PyResu
             let v = f32::from_be_bytes(arr);
             // Convert via ryu to avoid precision loss
             let mut buffer = ryu::Buffer::new();
-            let f64_val: f64 = buffer
-                .format(v)
-                .parse()
-                .map_err(|e: std::num::ParseFloatError| {
-                    pyo3::exceptions::PyValueError::new_err(e.to_string())
-                })?;
+            let f64_val: f64 =
+                buffer
+                    .format(v)
+                    .parse()
+                    .map_err(|e: std::num::ParseFloatError| {
+                        pyo3::exceptions::PyValueError::new_err(e.to_string())
+                    })?;
             f64_val.into_py_any(py)
         }
 
@@ -236,9 +228,9 @@ pub fn decode_binary_to_python(py: Python<'_>, oid: u32, bytes: &[u8]) -> PyResu
 
         OID_DATE => {
             // PostgreSQL binary date: i32 days since 2000-01-01
-            let arr: [u8; 4] = bytes.try_into().map_err(|_| {
-                pyo3::exceptions::PyValueError::new_err("Invalid DATE binary data")
-            })?;
+            let arr: [u8; 4] = bytes
+                .try_into()
+                .map_err(|_| pyo3::exceptions::PyValueError::new_err("Invalid DATE binary data"))?;
             let days = i32::from_be_bytes(arr);
             let date_class = get_date_class(py)?;
             // PostgreSQL epoch is 2000-01-01
@@ -249,9 +241,9 @@ pub fn decode_binary_to_python(py: Python<'_>, oid: u32, bytes: &[u8]) -> PyResu
 
         OID_TIME => {
             // PostgreSQL binary time: i64 microseconds since midnight
-            let arr: [u8; 8] = bytes.try_into().map_err(|_| {
-                pyo3::exceptions::PyValueError::new_err("Invalid TIME binary data")
-            })?;
+            let arr: [u8; 8] = bytes
+                .try_into()
+                .map_err(|_| pyo3::exceptions::PyValueError::new_err("Invalid TIME binary data"))?;
             let micros = i64::from_be_bytes(arr);
             let time_class = get_time_class(py)?;
             let (hour, minute, second, micro) = micros_to_time(micros);
@@ -266,7 +258,8 @@ pub fn decode_binary_to_python(py: Python<'_>, oid: u32, bytes: &[u8]) -> PyResu
             })?;
             let micros = i64::from_be_bytes(arr);
             let datetime_class = get_datetime_class(py)?;
-            let (year, month, day, hour, minute, second, micro) = micros_since_pg_epoch_to_datetime(micros);
+            let (year, month, day, hour, minute, second, micro) =
+                micros_since_pg_epoch_to_datetime(micros);
             let dt = datetime_class.call1((year, month, day, hour, minute, second, micro))?;
             dt.into_py_any(py)
         }
@@ -366,7 +359,7 @@ fn decode_bytea_text(s: &str) -> PyResult<Vec<u8>> {
                     _ => {
                         return Err(pyo3::exceptions::PyValueError::new_err(
                             "Invalid escape sequence",
-                        ))
+                        ));
                     }
                 }
             } else {

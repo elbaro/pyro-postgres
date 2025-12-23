@@ -59,9 +59,7 @@ impl SyncTransaction {
 
     fn begin(&mut self) -> PyroResult<()> {
         if self.started {
-            return Err(Error::IncorrectApiUsageError(
-                "Transaction already started",
-            ));
+            return Err(Error::IncorrectApiUsageError("Transaction already started"));
         }
         if self.finished {
             return Err(Error::TransactionClosedError);

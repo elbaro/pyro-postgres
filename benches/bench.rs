@@ -192,7 +192,8 @@ pub fn bench(c: &mut Criterion) {
                             let start_idx = g * 10000;
                             let end = iters.min(start_idx + 10000);
 
-                            let statement = stmt_template.replace("{}", &(end - start_idx).to_string());
+                            let statement =
+                                stmt_template.replace("{}", &(end - start_idx).to_string());
                             let c_statement = std::ffi::CString::new(statement).unwrap();
 
                             let start = std::time::Instant::now();
@@ -200,7 +201,12 @@ pub fn bench(c: &mut Criterion) {
                             sum += start.elapsed();
 
                             // Check no background tasks remain
-                            py.run(c"assert len(__import__('asyncio').all_tasks(loop)) == 0", None, None).unwrap();
+                            py.run(
+                                c"assert len(__import__('asyncio').all_tasks(loop)) == 0",
+                                None,
+                                None,
+                            )
+                            .unwrap();
                         }
                         sum
                     });
@@ -257,7 +263,8 @@ pub fn bench(c: &mut Criterion) {
                             let start_idx = g * 10000;
                             let end = iters.min(start_idx + 10000);
 
-                            let statement = stmt_template.replace("{}", &(end - start_idx).to_string());
+                            let statement =
+                                stmt_template.replace("{}", &(end - start_idx).to_string());
                             let c_statement = std::ffi::CString::new(statement).unwrap();
 
                             let start = std::time::Instant::now();

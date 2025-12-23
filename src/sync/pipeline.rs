@@ -1,7 +1,7 @@
 use either::Either;
 use parking_lot::MutexGuard;
-use pyo3::pybacked::PyBackedStr;
 use pyo3::prelude::*;
+use pyo3::pybacked::PyBackedStr;
 use pyo3::types::PyList;
 use zero_postgres::sync::{Conn, Pipeline};
 
@@ -122,12 +122,9 @@ impl SyncPipeline {
         query: Either<PyBackedStr, Py<Statement>>,
         params: Params,
     ) -> PyroResult<PyTicket> {
-        let pipeline = self
-            .pipeline
-            .as_mut()
-            .ok_or(Error::IncorrectApiUsageError(
-                "Pipeline not entered - use 'with conn.pipeline() as p:'",
-            ))?;
+        let pipeline = self.pipeline.as_mut().ok_or(Error::IncorrectApiUsageError(
+            "Pipeline not entered - use 'with conn.pipeline() as p:'",
+        ))?;
 
         let params_adapter = ParamsAdapter::new(&params);
         match query {
@@ -159,12 +156,9 @@ impl SyncPipeline {
     ///
     /// After calling sync(), you must claim all queued operations in order.
     fn sync(&mut self) -> PyroResult<()> {
-        let pipeline = self
-            .pipeline
-            .as_mut()
-            .ok_or(Error::IncorrectApiUsageError(
-                "Pipeline not entered - use 'with conn.pipeline() as p:'",
-            ))?;
+        let pipeline = self.pipeline.as_mut().ok_or(Error::IncorrectApiUsageError(
+            "Pipeline not entered - use 'with conn.pipeline() as p:'",
+        ))?;
 
         pipeline.sync()?;
         Ok(())
@@ -180,12 +174,9 @@ impl SyncPipeline {
         ticket: &PyTicket,
         as_dict: bool,
     ) -> PyroResult<Option<Py<PyAny>>> {
-        let pipeline = self
-            .pipeline
-            .as_mut()
-            .ok_or(Error::IncorrectApiUsageError(
-                "Pipeline not entered - use 'with conn.pipeline() as p:'",
-            ))?;
+        let pipeline = self.pipeline.as_mut().ok_or(Error::IncorrectApiUsageError(
+            "Pipeline not entered - use 'with conn.pipeline() as p:'",
+        ))?;
 
         if as_dict {
             let mut handler = DictHandler::new(py);
@@ -218,12 +209,9 @@ impl SyncPipeline {
         ticket: &PyTicket,
         as_dict: bool,
     ) -> PyroResult<Py<PyList>> {
-        let pipeline = self
-            .pipeline
-            .as_mut()
-            .ok_or(Error::IncorrectApiUsageError(
-                "Pipeline not entered - use 'with conn.pipeline() as p:'",
-            ))?;
+        let pipeline = self.pipeline.as_mut().ok_or(Error::IncorrectApiUsageError(
+            "Pipeline not entered - use 'with conn.pipeline() as p:'",
+        ))?;
 
         if as_dict {
             let mut handler = DictHandler::new(py);
@@ -240,12 +228,9 @@ impl SyncPipeline {
     ///
     /// Results must be claimed in the same order they were queued.
     fn claim_drop(&mut self, ticket: &PyTicket) -> PyroResult<()> {
-        let pipeline = self
-            .pipeline
-            .as_mut()
-            .ok_or(Error::IncorrectApiUsageError(
-                "Pipeline not entered - use 'with conn.pipeline() as p:'",
-            ))?;
+        let pipeline = self.pipeline.as_mut().ok_or(Error::IncorrectApiUsageError(
+            "Pipeline not entered - use 'with conn.pipeline() as p:'",
+        ))?;
 
         let mut handler = DropHandler::default();
         pipeline.claim(ticket.inner, &mut handler)?;
