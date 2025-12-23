@@ -11,6 +11,7 @@ use crate::error::{Error, PyroResult};
 use crate::isolation_level::IsolationLevel;
 use crate::opts::resolve_opts;
 use crate::params::Params;
+use crate::statement::Statement;
 use crate::sync::handler::{DictHandler, DropHandler, TupleHandler};
 use crate::sync::pipeline::SyncPipeline;
 use crate::sync::transaction::SyncTransaction;
@@ -248,26 +249,44 @@ impl SyncConn {
         Ok(())
     }
 
-    #[pyo3(signature = (query, params_list=vec![]))]
+    /// Execute a statement with multiple parameter sets in a batch.
+    ///
+    /// Uses pipeline mode internally for optimal performance.
+    #[pyo3(signature = (query, params_list))]
     fn exec_batch(&self, query: &str, params_list: Vec<Params>) -> PyroResult<()> {
         let mut guard = self.inner.lock();
         let conn = guard.as_mut().ok_or(Error::ConnectionClosedError)?;
 
-        let mut cache = self.stmt_cache.lock();
-        if !cache.contains_key(query) {
-            let stmt = conn.prepare(&query)?;
-            cache.insert(query.to_string(), stmt);
-        }
-        #[expect(clippy::unwrap_used)]
-        let stmt = cache.get(query).unwrap();
-
-        for params in params_list {
-            let mut handler = DropHandler::default();
-            let params_adapter = ParamsAdapter::new(&params);
-            conn.exec(stmt, params_adapter, &mut handler)?;
-            *self.affected_rows.lock() = handler.rows_affected;
-        }
+        let adapters: Vec<_> = params_list.iter().map(ParamsAdapter::new).collect();
+        conn.exec_batch(query, &adapters)?;
         Ok(())
+    }
+
+    /// Prepare a statement for later execution.
+    ///
+    /// Returns a Statement that can be used with `pipeline.exec()`:
+    ///
+    /// ```python
+    /// stmt = conn.prepare("INSERT INTO users (name) VALUES ($1)")
+    /// with conn.pipeline() as p:
+    ///     t1 = p.exec(stmt, ("Alice",))
+    ///     t2 = p.exec(stmt, ("Bob",))
+    ///     p.sync()
+    ///     p.claim_drop(t1)
+    ///     p.claim_drop(t2)
+    /// ```
+    fn prepare(&self, query: &str) -> PyroResult<Statement> {
+        let mut guard = self.inner.lock();
+        let conn = guard.as_mut().ok_or(Error::ConnectionClosedError)?;
+
+        let mut cache = self.stmt_cache.lock();
+        if let Some(stmt) = cache.get(query) {
+            return Ok(Statement::new(stmt.clone()));
+        }
+
+        let stmt = conn.prepare(query)?;
+        cache.insert(query.to_string(), stmt.clone());
+        Ok(Statement::new(stmt))
     }
 
     pub fn close(&self) {

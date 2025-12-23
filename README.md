@@ -2,4 +2,5 @@
 
 A high-performance PostgresQL driver for Python, backed by Rust.
 
-- [Benchmark](https://github.com/elbaro/pyro-postgres/blob/main/BENCHMARK.md)
+- [Benchmarks](https://github.com/elbaro/pyro-postgres/blob/main/BENCHMARK.md)
+- [Benchmark Summary](https://htmlpreview.github.io/?https://github.com/elbaro/pyro-postgres/blob/main/benchmarks.html)

@@ -7,7 +7,9 @@ pub mod isolation_level;
 pub mod opts;
 pub mod params;
 pub mod py_imports;
+pub mod statement;
 pub mod sync;
+pub mod ticket;
 pub mod tokio_thread;
 pub mod util;
 pub mod value;
@@ -18,8 +20,10 @@ use pyo3::prelude::*;
 use crate::{
     isolation_level::IsolationLevel,
     opts::Opts,
-    r#async::{conn::AsyncConn, pipeline::AsyncPipeline, pipeline::PyTicket as AsyncPyTicket, transaction::AsyncTransaction},
-    sync::{conn::SyncConn, pipeline::PyTicket, pipeline::SyncPipeline, transaction::SyncTransaction},
+    r#async::{conn::AsyncConn, pipeline::AsyncPipeline, transaction::AsyncTransaction},
+    statement::Statement,
+    sync::{conn::SyncConn, pipeline::SyncPipeline, transaction::SyncTransaction},
+    ticket::PyTicket,
     util::PyroFuture,
     value::{PyJson, PyJsonb},
 };
@@ -61,6 +65,12 @@ mod pyro_postgres {
     #[pymodule_export]
     use super::PyJsonb;
 
+    #[pymodule_export]
+    use super::Statement;
+
+    #[pymodule_export]
+    use super::PyTicket;
+
     #[pymodule]
     mod error {
         use crate::error as error_types;
@@ -99,9 +109,6 @@ mod pyro_postgres {
         use crate::r#async::pipeline::AsyncPipeline;
 
         #[pymodule_export]
-        use crate::r#async::pipeline::PyTicket;
-
-        #[pymodule_export]
         use crate::r#async::transaction::AsyncTransaction;
     }
 
@@ -109,9 +116,6 @@ mod pyro_postgres {
     mod sync {
         #[pymodule_export]
         use crate::sync::conn::SyncConn;
-
-        #[pymodule_export]
-        use crate::sync::pipeline::PyTicket;
 
         #[pymodule_export]
         use crate::sync::pipeline::SyncPipeline;
@@ -135,16 +139,16 @@ mod pyro_postgres {
         // Alias
         Python::attach(|py| {
             m.add("Opts", py.get_type::<Opts>())?;
+            m.add("Ticket", py.get_type::<PyTicket>())?;
             m.add("AsyncConn", py.get_type::<AsyncConn>())?;
             m.add("AsyncPipeline", py.get_type::<AsyncPipeline>())?;
-            m.add("AsyncTicket", py.get_type::<AsyncPyTicket>())?;
             m.add("AsyncTransaction", py.get_type::<AsyncTransaction>())?;
             m.add("SyncConn", py.get_type::<SyncConn>())?;
             m.add("SyncPipeline", py.get_type::<SyncPipeline>())?;
-            m.add("SyncTicket", py.get_type::<PyTicket>())?;
             m.add("SyncTransaction", py.get_type::<SyncTransaction>())?;
             m.add("Json", py.get_type::<PyJson>())?;
             m.add("Jsonb", py.get_type::<PyJsonb>())?;
+            m.add("Statement", py.get_type::<Statement>())?;
             PyResult::Ok(())
         })?;
 

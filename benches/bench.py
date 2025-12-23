@@ -169,6 +169,24 @@ async def insert_pyro_async(conn, n):
         )
 
 
+async def insert_pyro_async_pipeline(conn, n):
+    """Insert using pipeline mode with batches of up to 1000 rows"""
+    batch_size = 1000
+    stmt = await conn.prepare(
+        "INSERT INTO benchmark_test (name, age, email, score, description) VALUES ($1, $2, $3, $4, $5)"
+    )
+    for batch_start in range(0, n, batch_size):
+        batch_end = min(batch_start + batch_size, n)
+        async with conn.pipeline() as p:
+            tickets = []
+            for i in range(batch_start, batch_end):
+                ticket = p.exec(stmt, DATA[i % 10000])
+                tickets.append(ticket)
+            await p.sync()
+            for ticket in tickets:
+                await p.claim_drop(ticket)
+
+
 async def insert_pyro_async_batch(conn, n):
     """Insert using exec_batch with batches of up to 1000 rows"""
     batch_size = 1000
@@ -187,6 +205,24 @@ def insert_pyro_sync(conn, n):
             "INSERT INTO benchmark_test (name, age, email, score, description) VALUES ($1, $2, $3, $4, $5)",
             DATA[i % 10000],
         )
+
+
+def insert_pyro_sync_pipeline(conn, n):
+    """Insert using pipeline mode with batches of up to 1000 rows"""
+    batch_size = 1000
+    stmt = conn.prepare(
+        "INSERT INTO benchmark_test (name, age, email, score, description) VALUES ($1, $2, $3, $4, $5)"
+    )
+    for batch_start in range(0, n, batch_size):
+        batch_end = min(batch_start + batch_size, n)
+        with conn.pipeline() as p:
+            tickets = []
+            for i in range(batch_start, batch_end):
+                ticket = p.exec(stmt, DATA[i % 10000])
+                tickets.append(ticket)
+            p.sync()
+            for ticket in tickets:
+                p.claim_drop(ticket)
 
 
 def insert_pyro_sync_batch(conn, n):
@@ -252,6 +288,47 @@ def insert_psycopg_sync_batch(conn, n):
             )
 
 
+async def insert_psycopg_async_batch(conn, n):
+    """Insert using executemany with batches of up to 1000 rows"""
+    async with conn.cursor() as cursor:
+        batch_size = 1000
+        for batch_start in range(0, n, batch_size):
+            batch_end = min(batch_start + batch_size, n)
+            batch_data = [DATA[i % 10000] for i in range(batch_start, batch_end)]
+            await cursor.executemany(
+                "INSERT INTO benchmark_test (name, age, email, score, description) VALUES (%s, %s, %s, %s, %s)",
+                batch_data,
+            )
+
+
+async def insert_psycopg_async_pipeline(conn, n):
+    """Insert using pipeline mode with batches of up to 1000 rows"""
+    batch_size = 1000
+    for batch_start in range(0, n, batch_size):
+        batch_end = min(batch_start + batch_size, n)
+        async with conn.pipeline():
+            async with conn.cursor() as cursor:
+                for i in range(batch_start, batch_end):
+                    await cursor.execute(
+                        "INSERT INTO benchmark_test (name, age, email, score, description) VALUES (%s, %s, %s, %s, %s)",
+                        DATA[i % 10000],
+                    )
+
+
+def insert_psycopg_sync_pipeline(conn, n):
+    """Insert using pipeline mode with batches of up to 1000 rows"""
+    batch_size = 1000
+    for batch_start in range(0, n, batch_size):
+        batch_end = min(batch_start + batch_size, n)
+        with conn.pipeline():
+            with conn.cursor() as cursor:
+                for i in range(batch_start, batch_end):
+                    cursor.execute(
+                        "INSERT INTO benchmark_test (name, age, email, score, description) VALUES (%s, %s, %s, %s, %s)",
+                        DATA[i % 10000],
+                    )
+
+
 # --- Select ------------------------------------------------------------------
 
 
@@ -259,12 +336,56 @@ async def select_pyro_async(conn):
     await conn.exec("SELECT * FROM benchmark_test")
 
 
+async def select_pyro_async_pipeline(conn, n):
+    """Select n rows using pipeline mode with point queries"""
+    stmt = await conn.prepare("SELECT * FROM benchmark_test WHERE id = $1")
+    async with conn.pipeline() as p:
+        tickets = []
+        for i in range(1, n + 1):
+            ticket = p.exec(stmt, (i,))
+            tickets.append(ticket)
+        await p.sync()
+        for ticket in tickets:
+            await p.claim(ticket)
+
+
+async def select_pyro_async_batch(conn, n):
+    """Select n rows using exec_batch with point queries"""
+    params_list = [(i,) for i in range(1, n + 1)]
+    await conn.exec_batch("SELECT * FROM benchmark_test WHERE id = $1", params_list)
+
+
 def select_pyro_sync(conn):
     conn.exec("SELECT * FROM benchmark_test")
 
 
+def select_pyro_sync_pipeline(conn, n):
+    """Select n rows using pipeline mode with point queries"""
+    stmt = conn.prepare("SELECT * FROM benchmark_test WHERE id = $1")
+    with conn.pipeline() as p:
+        tickets = []
+        for i in range(1, n + 1):
+            ticket = p.exec(stmt, (i,))
+            tickets.append(ticket)
+        p.sync()
+        for ticket in tickets:
+            p.claim(ticket)
+
+
+def select_pyro_sync_batch(conn, n):
+    """Select n rows using exec_batch with point queries"""
+    params_list = [(i,) for i in range(1, n + 1)]
+    conn.exec_batch("SELECT * FROM benchmark_test WHERE id = $1", params_list)
+
+
 async def select_asyncpg(conn):
     await conn.fetch("SELECT * FROM benchmark_test")
+
+
+async def select_asyncpg_executemany(conn, n):
+    """Select n rows using fetch with point queries (no true executemany for SELECT)"""
+    for i in range(1, n + 1):
+        await conn.fetch("SELECT * FROM benchmark_test WHERE id = $1", i)
 
 
 async def select_psycopg_async(conn):
@@ -273,7 +394,25 @@ async def select_psycopg_async(conn):
         await cursor.fetchall()
 
 
+async def select_psycopg_async_pipeline(conn, n):
+    """Select n rows using pipeline mode with point queries"""
+    async with conn.pipeline():
+        async with conn.cursor() as cursor:
+            for i in range(1, n + 1):
+                await cursor.execute("SELECT * FROM benchmark_test WHERE id = %s", (i,))
+                await cursor.fetchall()
+
+
 def select_psycopg_sync(conn):
     with conn.cursor() as cursor:
         cursor.execute("SELECT * FROM benchmark_test")
         cursor.fetchall()
+
+
+def select_psycopg_sync_pipeline(conn, n):
+    """Select n rows using pipeline mode with point queries"""
+    with conn.pipeline():
+        with conn.cursor() as cursor:
+            for i in range(1, n + 1):
+                cursor.execute("SELECT * FROM benchmark_test WHERE id = %s", (i,))
+                cursor.fetchall()

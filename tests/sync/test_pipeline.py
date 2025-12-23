@@ -1,7 +1,6 @@
 """Tests for sync pipeline mode (batching multiple queries)."""
 
 import pytest
-
 from pyro_postgres.sync import Conn
 
 from ..conftest import (

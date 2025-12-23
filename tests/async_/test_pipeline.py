@@ -19,8 +19,8 @@ class TestAsyncPipelineBasic:
         """Test basic pipeline with exec and claim_collect."""
         conn = await Conn.new(get_test_db_url())
         async with conn.pipeline() as p:
-            t1 = await p.exec("SELECT $1::int", (1,))
-            t2 = await p.exec("SELECT $1::int", (2,))
+            t1 = p.exec("SELECT $1::int", (1,))
+            t2 = p.exec("SELECT $1::int", (2,))
             await p.sync()
             result1 = await p.claim_collect(t1)
             result2 = await p.claim_collect(t2)
@@ -35,7 +35,7 @@ class TestAsyncPipelineBasic:
         """Test pipeline with claim_one."""
         conn = await Conn.new(get_test_db_url())
         async with conn.pipeline() as p:
-            t1 = await p.exec("SELECT $1::int", (42,))
+            t1 = p.exec("SELECT $1::int", (42,))
             await p.sync()
             result = await p.claim_one(t1)
         assert result is not None
@@ -48,7 +48,7 @@ class TestAsyncPipelineBasic:
         conn = await Conn.new(get_test_db_url())
         await setup_test_table_async(conn)
         async with conn.pipeline() as p:
-            t1 = await p.exec("SELECT name FROM test_table WHERE age > $1", (1000,))
+            t1 = p.exec("SELECT name FROM test_table WHERE age > $1", (1000,))
             await p.sync()
             result = await p.claim_one(t1)
         assert result is None
@@ -61,7 +61,7 @@ class TestAsyncPipelineBasic:
         conn = await Conn.new(get_test_db_url())
         await setup_test_table_async(conn)
         async with conn.pipeline() as p:
-            t1 = await p.exec(
+            t1 = p.exec(
                 "INSERT INTO test_table (name, age) VALUES ($1, $2)",
                 ("Alice", 30),
             )
@@ -83,10 +83,10 @@ class TestAsyncPipelineMultiple:
         """Test pipeline with multiple queries."""
         conn = await Conn.new(get_test_db_url())
         async with conn.pipeline() as p:
-            t1 = await p.exec("SELECT 1::int", ())
-            t2 = await p.exec("SELECT 2::int", ())
-            t3 = await p.exec("SELECT 3::int", ())
-            t4 = await p.exec("SELECT 4::int", ())
+            t1 = p.exec("SELECT 1::int", ())
+            t2 = p.exec("SELECT 2::int", ())
+            t3 = p.exec("SELECT 3::int", ())
+            t4 = p.exec("SELECT 4::int", ())
             await p.sync()
             r1 = await p.claim_one(t1)
             r2 = await p.claim_one(t2)
@@ -104,15 +104,15 @@ class TestAsyncPipelineMultiple:
         conn = await Conn.new(get_test_db_url())
         await setup_test_table_async(conn)
         async with conn.pipeline() as p:
-            t1 = await p.exec(
+            t1 = p.exec(
                 "INSERT INTO test_table (name, age) VALUES ($1, $2)",
                 ("Alice", 30),
             )
-            t2 = await p.exec(
+            t2 = p.exec(
                 "INSERT INTO test_table (name, age) VALUES ($1, $2)",
                 ("Bob", 25),
             )
-            t3 = await p.exec("SELECT COUNT(*) FROM test_table", ())
+            t3 = p.exec("SELECT COUNT(*) FROM test_table", ())
             await p.sync()
             await p.claim_drop(t1)
             await p.claim_drop(t2)
@@ -130,7 +130,7 @@ class TestAsyncPipelineAsDict:
         """Test claim_one with as_dict=True returns dictionary."""
         conn = await Conn.new(get_test_db_url())
         async with conn.pipeline() as p:
-            t1 = await p.exec("SELECT 42 as answer, 'hello' as greeting", ())
+            t1 = p.exec("SELECT 42 as answer, 'hello' as greeting", ())
             await p.sync()
             result = await p.claim_one(t1, as_dict=True)
         assert result is not None
@@ -153,7 +153,7 @@ class TestAsyncPipelineAsDict:
             ("Bob", 25),
         )
         async with conn.pipeline() as p:
-            t1 = await p.exec("SELECT name, age FROM test_table ORDER BY age", ())
+            t1 = p.exec("SELECT name, age FROM test_table ORDER BY age", ())
             await p.sync()
             results = await p.claim_collect(t1, as_dict=True)
         assert len(results) == 2
@@ -174,8 +174,8 @@ class TestAsyncPipelineCleanup:
         """Test that unclaimed operations are cleaned up on exit."""
         conn = await Conn.new(get_test_db_url())
         async with conn.pipeline() as p:
-            t1 = await p.exec("SELECT 1::int", ())
-            t2 = await p.exec("SELECT 2::int", ())
+            t1 = p.exec("SELECT 1::int", ())
+            t2 = p.exec("SELECT 2::int", ())
             await p.sync()
             # Only claim t1, leave t2 unclaimed
             await p.claim_one(t1)
@@ -190,8 +190,8 @@ class TestAsyncPipelineCleanup:
         """Test that cleanup handles pending operations without sync."""
         conn = await Conn.new(get_test_db_url())
         async with conn.pipeline() as p:
-            await p.exec("SELECT 1::int", ())
-            await p.exec("SELECT 2::int", ())
+            p.exec("SELECT 1::int", ())
+            p.exec("SELECT 2::int", ())
             # No sync(), no claim - cleanup should handle this
         # Connection should still be usable after cleanup
         result = await conn.query_first("SELECT 42 as answer")
@@ -207,16 +207,16 @@ class TestAsyncPipelineState:
         """Test pending_count method."""
         conn = await Conn.new(get_test_db_url())
         async with conn.pipeline() as p:
-            assert await p.pending_count() == 0
-            t1 = await p.exec("SELECT 1::int", ())
-            assert await p.pending_count() == 1
-            t2 = await p.exec("SELECT 2::int", ())
-            assert await p.pending_count() == 2
+            assert p.pending_count() == 0
+            t1 = p.exec("SELECT 1::int", ())
+            assert p.pending_count() == 1
+            t2 = p.exec("SELECT 2::int", ())
+            assert p.pending_count() == 2
             await p.sync()
             await p.claim_one(t1)
-            assert await p.pending_count() == 1
+            assert p.pending_count() == 1
             await p.claim_one(t2)
-            assert await p.pending_count() == 0
+            assert p.pending_count() == 0
         await conn.close()
 
     @pytest.mark.asyncio
@@ -224,12 +224,12 @@ class TestAsyncPipelineState:
         """Test is_aborted returns False for successful operations."""
         conn = await Conn.new(get_test_db_url())
         async with conn.pipeline() as p:
-            assert await p.is_aborted() is False
-            t1 = await p.exec("SELECT 1::int", ())
+            assert p.is_aborted() is False
+            t1 = p.exec("SELECT 1::int", ())
             await p.sync()
-            assert await p.is_aborted() is False
+            assert p.is_aborted() is False
             await p.claim_one(t1)
-            assert await p.is_aborted() is False
+            assert p.is_aborted() is False
         await conn.close()
 
 
@@ -242,7 +242,7 @@ class TestAsyncPipelineErrors:
         conn = await Conn.new(get_test_db_url())
         p = conn.pipeline()
         with pytest.raises(Exception):
-            await p.exec("SELECT 1::int", ())
+            p.exec("SELECT 1::int", ())
         await conn.close()
 
     @pytest.mark.asyncio

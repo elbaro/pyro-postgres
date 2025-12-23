@@ -2,19 +2,12 @@ import logging
 import os
 
 import pytest
-
 from pyro_postgres import Opts
-
-
-def pytest_configure(config):
-    logging.getLogger("pyro_postgres").setLevel(logging.DEBUG)
 
 
 def get_test_db_url() -> str:
     """Get the test database URL from environment or default."""
-    return os.environ.get(
-        "DATABASE_URL", "postgresql://test:1234@localhost:5432/test"
-    )
+    return os.environ.get("DATABASE_URL", "postgresql://test:1234@localhost:5432/test")
 
 
 def get_async_opts() -> Opts:

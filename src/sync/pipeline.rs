@@ -1,19 +1,17 @@
+use either::Either;
 use parking_lot::MutexGuard;
+use pyo3::pybacked::PyBackedStr;
 use pyo3::prelude::*;
 use pyo3::types::PyList;
-use zero_postgres::sync::{Conn, Pipeline, Ticket};
+use zero_postgres::sync::{Conn, Pipeline};
 
 use crate::error::{Error, PyroResult};
 use crate::params::Params;
+use crate::statement::Statement;
 use crate::sync::conn::SyncConn;
 use crate::sync::handler::{DictHandler, DropHandler, TupleHandler};
+use crate::ticket::PyTicket;
 use crate::zero_params_adapter::ParamsAdapter;
-
-/// Python wrapper for pipeline Ticket.
-#[pyclass(module = "pyro_postgres.sync", name = "Ticket")]
-pub struct PyTicket {
-    inner: Ticket,
-}
 
 /// Pipeline mode for batching multiple queries.
 ///
@@ -35,6 +33,8 @@ pub struct SyncPipeline {
     // Pipeline is dropped before guard in cleanup().
     guard: Option<MutexGuard<'static, Option<Conn>>>,
     pipeline: Option<Pipeline<'static>>,
+    /// Statements stored here to ensure they outlive their tickets.
+    statements: Vec<Py<Statement>>,
     entered: bool,
 }
 
@@ -44,6 +44,7 @@ impl SyncPipeline {
             conn,
             guard: None,
             pipeline: None,
+            statements: Vec::new(),
             entered: false,
         }
     }
@@ -54,6 +55,8 @@ impl SyncPipeline {
             pipeline.cleanup();
         }
         self.pipeline = None;
+        // Clear statements
+        self.statements.clear();
         // Then drop guard to release the mutex
         self.guard = None;
         self.entered = false;
@@ -110,9 +113,15 @@ impl SyncPipeline {
 
     /// Queue a statement execution.
     ///
+    /// Accepts either a SQL query string or a prepared Statement.
     /// Returns a Ticket that must be claimed later using claim_one, claim_collect, or claim_drop.
     #[pyo3(signature = (query, params=Params::default()))]
-    fn exec(&mut self, query: &str, params: Params) -> PyroResult<PyTicket> {
+    fn exec(
+        &mut self,
+        py: Python<'_>,
+        query: Either<PyBackedStr, Py<Statement>>,
+        params: Params,
+    ) -> PyroResult<PyTicket> {
         let pipeline = self
             .pipeline
             .as_mut()
@@ -121,9 +130,29 @@ impl SyncPipeline {
             ))?;
 
         let params_adapter = ParamsAdapter::new(&params);
-        let ticket = pipeline.exec(query, params_adapter)?;
-
-        Ok(PyTicket { inner: ticket })
+        match query {
+            Either::Left(sql) => {
+                let ticket = pipeline.exec(&*sql, params_adapter)?;
+                // SAFETY: SQL tickets have no stmt reference
+                Ok(unsafe { PyTicket::new(ticket) })
+            }
+            Either::Right(stmt_py) => {
+                // Store the statement to keep it alive
+                self.statements.push(stmt_py);
+                // Get a pointer to the inner PreparedStatement
+                let inner_ptr = {
+                    let stmt_ref = self.statements.last().expect("just pushed").borrow(py);
+                    &stmt_ref.inner as *const _
+                };
+                // SAFETY: The Py<Statement> in self.statements keeps the Statement alive,
+                // and the pipeline holds &mut self, so the reference is valid.
+                let stmt_ref = unsafe { &*inner_ptr };
+                let ticket = pipeline.exec(stmt_ref, params_adapter)?;
+                // SAFETY: The stmt reference points to a Statement stored in
+                // self.statements, which lives until pipeline cleanup.
+                Ok(unsafe { PyTicket::new(ticket) })
+            }
+        }
     }
 
     /// Send SYNC message to establish transaction boundary.
@@ -239,6 +268,19 @@ impl SyncPipeline {
         ))?;
 
         Ok(pipeline.is_aborted())
+    }
+
+    /// Claim and collect all rows (alias for claim_collect).
+    ///
+    /// Results must be claimed in the same order they were queued.
+    #[pyo3(signature = (ticket, *, as_dict=false))]
+    fn claim(
+        &mut self,
+        py: Python<'_>,
+        ticket: &PyTicket,
+        as_dict: bool,
+    ) -> PyroResult<Py<PyList>> {
+        self.claim_collect(py, ticket, as_dict)
     }
 }
 

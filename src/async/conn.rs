@@ -16,6 +16,7 @@ use crate::error::{Error, PyroResult};
 use crate::isolation_level::IsolationLevel;
 use crate::opts::resolve_opts;
 use crate::params::Params;
+use crate::statement::Statement;
 use crate::util::{rust_future_into_py, PyroFuture};
 use crate::zero_params_adapter::ParamsAdapter;
 
@@ -377,42 +378,64 @@ impl AsyncConn {
         })
     }
 
-    #[pyo3(signature = (query, params=vec![]))]
+    /// Execute a statement with multiple parameter sets in a batch.
+    ///
+    /// Uses pipeline mode internally for optimal performance.
+    #[pyo3(signature = (query, params_list))]
     fn exec_batch(
         &self,
         py: Python<'_>,
         query: PyBackedStr,
-        params: Vec<Py<PyAny>>,
+        params_list: Vec<Py<PyAny>>,
     ) -> PyResult<Py<PyroFuture>> {
         let mut params_vec = Vec::new();
-        for p in params {
+        for p in params_list {
             params_vec.push(p.extract::<Params>(py)?);
         }
         let query_string = query.to_string();
 
         let inner = self.inner.clone();
-        let stmt_cache = self.stmt_cache.clone();
-        let affected_rows_arc = self.affected_rows.clone();
 
         rust_future_into_py::<_, ()>(py, async move {
             let mut guard = inner.lock().await;
             let conn = guard.as_mut().ok_or(Error::ConnectionClosedError)?;
 
-            let mut cache = stmt_cache.lock().await;
-            if !cache.contains_key(&query_string) {
-                let stmt = conn.prepare(&query_string).await?;
-                cache.insert(query_string.clone(), stmt);
-            }
-            #[expect(clippy::unwrap_used)]
-            let stmt = cache.get(&query_string).unwrap();
-
-            for params_obj in params_vec {
-                let mut handler = DropHandler::default();
-                let params_adapter = ParamsAdapter::new(&params_obj);
-                conn.exec(stmt, params_adapter, &mut handler).await?;
-                *affected_rows_arc.lock().await = handler.rows_affected;
-            }
+            let adapters: Vec<_> = params_vec.iter().map(ParamsAdapter::new).collect();
+            conn.exec_batch(query_string.as_str(), &adapters).await?;
             Ok(())
+        })
+    }
+
+    /// Prepare a statement for later execution.
+    ///
+    /// Returns a Statement that can be used with `pipeline.exec()`:
+    ///
+    /// ```python
+    /// stmt = await conn.prepare("INSERT INTO users (name) VALUES ($1)")
+    /// async with conn.pipeline() as p:
+    ///     t1 = await p.exec(stmt, ("Alice",))
+    ///     t2 = await p.exec(stmt, ("Bob",))
+    ///     await p.sync()
+    ///     await p.claim_drop(t1)
+    ///     await p.claim_drop(t2)
+    /// ```
+    fn prepare(&self, py: Python<'_>, query: PyBackedStr) -> PyResult<Py<PyroFuture>> {
+        let query_string = query.to_string();
+        let inner = self.inner.clone();
+        let stmt_cache = self.stmt_cache.clone();
+
+        rust_future_into_py(py, async move {
+            let mut guard = inner.lock().await;
+            let conn = guard.as_mut().ok_or(Error::ConnectionClosedError)?;
+
+            let mut cache = stmt_cache.lock().await;
+            if let Some(stmt) = cache.get(&query_string) {
+                return Ok(Statement::new(stmt.clone()));
+            }
+
+            let stmt = conn.prepare(&query_string).await?;
+            cache.insert(query_string, stmt.clone());
+            Ok(Statement::new(stmt))
         })
     }
 }
