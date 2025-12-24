@@ -5,7 +5,7 @@
 # Walkthrough
 
 - [Connection](conn.md)
-- [Query Execution](query.md)
+- [Query](query.md)
 - [Transaction](tx.md)
 - [Pipelining](pipeline.md)
 - [Logging](log.md)

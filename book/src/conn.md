@@ -8,34 +8,40 @@ An URL can start with
 - `postgres://`
 - `postgresql://`
 
-and additional parameters can be
-
-#### Example: basic
+The URL `pg://{USER}:{PASSWORD}@{HOST}:{PORT}/{DATABASE}?PARAM1=VALUE1&PARAM2=VALUE2` is equivalent to
 
 ```py
-from pyro_postgres.sync import Conn, Opts
-
-# url
-conn1 = Conn("pg://test:1234@localhost:5432/test_db")
-
-# Opts from url
-conn2 = Conn(Opts::from_url("pg://test:1234@localhost:5432/test_db"))
-
-# Opts API
-conn3 = Conn(
-    Opts()
-        .username("test")
-        .password("1234")
-        .hostname("localhost")
-        .port("5432"")
-        .db("test_db")
-)
-
-# url + Opts API
-conn4 = Conn(Opts("pg://test:1234@localhost:5432").db("test_db"))
+Opts()
+  .username('USER')
+  .password('USER')
+  .hostname('HOST')
+  .port('PORT')
+  .db('DATABASE')
+  .param1('VALUE1')
+  .param2('VALUE2')
 ```
 
-#### Example: async
+### Example: basic
+
+```py
+from pyro_postgres.sync import Conn
+from pyro_postgres import Opts
+
+# url
+conn1 = Conn("pg://test:1234@localhost:5432/test_db?tls=require")
+
+# url + Opts
+conn2 = Conn(Opts("pg://test@localhost").tcp_nodelay(True).tls("require"))
+
+# Opts
+conn3 = Conn(
+    Opts()
+        .socket("/tmp/pg/.s.PGSQL.5432")
+        .db("test_db")
+)
+```
+
+### Example: async
 
 ```py
 from pyro_postgres.async import Conn, Opts
@@ -43,13 +49,13 @@ from pyro_postgres.async import Conn, Opts
 conn = await Conn.new("pg://test:1234@localhost:5432/test_db")
 ```
 
-#### Example: unix socket
+### Example: unix socket
 
 ```py
 from pyro_postgres.sync import Conn
 
 # hostname 'localhost' is ignored
-conn = Conn("pg://test:1234@localhost:5432/test?socket=/tmp/pg/.s.PGSQL.5432")
+conn = Conn("pg://localhost/test?socket=/tmp/pg/.s.PGSQL.5432")
 ```
 
 ## Advanced: Upgrade to Unix Socket
@@ -63,5 +69,5 @@ This upgrade happens transparently in connection time. If succeds, the construct
 conn = Conn("pg://test:1234@localhost")  # `socket` parameter is not provided, but `conn` can be a TCP connection or Unix socket connection.
 ```
 
-This feature is useful if your local socket address is located at a dynamic location `/run/user/1000/devenv-8c67ae1/postgres/.s.PGSQL.5432`.
+This feature is useful if your local socket address is located at a dynamic location like `/run/user/1000/devenv-8c67ae1/postgres/.s.PGSQL.5432`.
 For production, disable this flag and use the TCP connection or manually specify the socket address.
