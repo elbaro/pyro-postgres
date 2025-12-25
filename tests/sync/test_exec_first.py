@@ -39,9 +39,7 @@ class TestSyncExecFirstBasic:
             "INSERT INTO test_table (name, age) VALUES ($1, $2), ($3, $4)",
             ("Alice", 30, "Bob", 25),
         )
-        result = conn.exec_first(
-            "SELECT name FROM test_table WHERE age > $1", (20,)
-        )
+        result = conn.exec_first("SELECT name FROM test_table WHERE age > $1", (20,))
         assert result is not None
         assert result[0] in ("Alice", "Bob")
         conn.close()

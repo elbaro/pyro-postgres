@@ -32,7 +32,9 @@ class TestAsyncQueryDropReturnsAffectedRows:
         await setup_test_table_async(conn)
         await conn.query_drop("INSERT INTO test_table (name, age) VALUES ('Alice', 30)")
         await conn.query_drop("INSERT INTO test_table (name, age) VALUES ('Bob', 25)")
-        await conn.query_drop("INSERT INTO test_table (name, age) VALUES ('Charlie', 35)")
+        await conn.query_drop(
+            "INSERT INTO test_table (name, age) VALUES ('Charlie', 35)"
+        )
         affected = await conn.query_drop(
             "UPDATE test_table SET age = age + 1 WHERE age > 25"
         )

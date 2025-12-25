@@ -93,9 +93,7 @@ class TestSyncQueryFirstAsDict:
     def test_query_first_as_dict_column_access(self):
         """Test as_dict result can be accessed by column name."""
         conn = Conn(get_test_db_url())
-        result = conn.query_first(
-            "SELECT 42 as value, 'test' as label", as_dict=True
-        )
+        result = conn.query_first("SELECT 42 as value, 'test' as label", as_dict=True)
         assert result is not None
         assert result["value"] == 42
         assert result["label"] == "test"

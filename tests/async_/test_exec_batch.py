@@ -38,9 +38,7 @@ class TestAsyncExecBatchBasic:
         """Test exec_batch with empty params list (no-op)."""
         conn = await Conn.new(get_test_db_url())
         await setup_test_table_async(conn)
-        await conn.exec_batch(
-            "INSERT INTO test_table (name, age) VALUES ($1, $2)", []
-        )
+        await conn.exec_batch("INSERT INTO test_table (name, age) VALUES ($1, $2)", [])
         count = await conn.query_first("SELECT COUNT(*) FROM test_table")
         assert count[0] == 0
         await conn.close()
@@ -194,9 +192,7 @@ class TestAsyncExecBatchDifferentOperations:
         await conn.exec_batch(
             "UPDATE test_table SET age = $1 WHERE name = $2", update_params
         )
-        row = await conn.query_first(
-            "SELECT age FROM test_table WHERE name = 'Alice'"
-        )
+        row = await conn.query_first("SELECT age FROM test_table WHERE name = 'Alice'")
         assert row[0] == 31
         await conn.close()
 
@@ -218,14 +214,10 @@ class TestAsyncExecBatchDifferentOperations:
             ("Alice",),
             ("Charlie",),
         ]
-        await conn.exec_batch(
-            "DELETE FROM test_table WHERE name = $1", delete_params
-        )
+        await conn.exec_batch("DELETE FROM test_table WHERE name = $1", delete_params)
         count = await conn.query_first("SELECT COUNT(*) FROM test_table")
         assert count[0] == 2
-        remaining = await conn.query(
-            "SELECT name FROM test_table ORDER BY name"
-        )
+        remaining = await conn.query("SELECT name FROM test_table ORDER BY name")
         assert len(remaining) == 2
         assert remaining[0][0] == "Bob"
         assert remaining[1][0] == "David"

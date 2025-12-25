@@ -300,9 +300,7 @@ class TestSyncTransactionReadOnly:
 
         conn.query_drop("INSERT INTO test_table (name, age) VALUES ('Alice', 30)")
 
-        with conn.tx(
-            isolation_level=IsolationLevel.Serializable, readonly=True
-        ):
+        with conn.tx(isolation_level=IsolationLevel.Serializable, readonly=True):
             result = conn.query_first("SELECT name FROM test_table")
             assert result[0] == "Alice"
 

@@ -198,12 +198,8 @@ class TestAsyncExecFirstConnectionState:
             "INSERT INTO test_table (name, age) VALUES ($1, $2), ($3, $4)",
             ("Alice", 30, "Bob", 25),
         )
-        r1 = await conn.exec_first(
-            "SELECT name FROM test_table ORDER BY age ASC", ()
-        )
-        r2 = await conn.exec_first(
-            "SELECT name FROM test_table ORDER BY age DESC", ()
-        )
+        r1 = await conn.exec_first("SELECT name FROM test_table ORDER BY age ASC", ())
+        r2 = await conn.exec_first("SELECT name FROM test_table ORDER BY age DESC", ())
         assert r1[0] == "Bob"
         assert r2[0] == "Alice"
         await conn.close()

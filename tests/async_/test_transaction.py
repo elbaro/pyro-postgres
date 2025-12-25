@@ -183,9 +183,7 @@ class TestAsyncTransactionIsolationLevel:
         conn = await Conn.new(get_test_db_url())
         await setup_test_table_async(conn)
 
-        async with conn.tx(
-            isolation_level=IsolationLevel.ReadUncommitted
-        ):
+        async with conn.tx(isolation_level=IsolationLevel.ReadUncommitted):
             await conn.query_drop(
                 "INSERT INTO test_table (name, age) VALUES ('Alice', 30)"
             )
@@ -219,9 +217,7 @@ class TestAsyncTransactionIsolationLevel:
         conn = await Conn.new(get_test_db_url())
         await setup_test_table_async(conn)
 
-        async with conn.tx(
-            isolation_level=IsolationLevel.RepeatableRead
-        ):
+        async with conn.tx(isolation_level=IsolationLevel.RepeatableRead):
             await conn.query_drop(
                 "INSERT INTO test_table (name, age) VALUES ('Alice', 30)"
             )
@@ -295,9 +291,7 @@ class TestAsyncTransactionReadOnly:
 
         await conn.query_drop("INSERT INTO test_table (name, age) VALUES ('Alice', 30)")
 
-        async with conn.tx(
-            isolation_level=IsolationLevel.Serializable, readonly=True
-        ):
+        async with conn.tx(isolation_level=IsolationLevel.Serializable, readonly=True):
             result = await conn.query_first("SELECT name FROM test_table")
             assert result[0] == "Alice"
 

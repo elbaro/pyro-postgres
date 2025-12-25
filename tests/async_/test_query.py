@@ -121,7 +121,9 @@ class TestAsyncQueryWithNull:
         """Test query returns NULL values correctly."""
         conn = await Conn.new(get_test_db_url())
         await setup_test_table_async(conn)
-        await conn.query_drop("INSERT INTO test_table (name, age) VALUES ('NoAge', NULL)")
+        await conn.query_drop(
+            "INSERT INTO test_table (name, age) VALUES ('NoAge', NULL)"
+        )
         results = await conn.query("SELECT name, age FROM test_table")
         assert len(results) == 1
         assert results[0][0] == "NoAge"

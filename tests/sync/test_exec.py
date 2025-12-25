@@ -68,9 +68,7 @@ class TestSyncExecWithNull:
             "INSERT INTO test_table (name, age) VALUES ($1, $2)",
             ("Alice", None),
         )
-        results = conn.exec(
-            "SELECT age FROM test_table WHERE name = $1", ("Alice",)
-        )
+        results = conn.exec("SELECT age FROM test_table WHERE name = $1", ("Alice",))
         assert len(results) == 1
         assert results[0][0] is None
         conn.close()
@@ -123,9 +121,7 @@ class TestSyncExecNoResults:
             "INSERT INTO test_table (name, age) VALUES ($1, $2)",
             ("Alice", 30),
         )
-        results = conn.exec(
-            "SELECT name, age FROM test_table WHERE age > $1", (100,)
-        )
+        results = conn.exec("SELECT name, age FROM test_table WHERE age > $1", (100,))
         assert results == []
         conn.close()
 
@@ -170,9 +166,7 @@ class TestSyncExecMultipleRows:
             "INSERT INTO test_table (name, age) VALUES ($1, $2), ($3, $4), ($5, $6)",
             ("Alice", 30, "Bob", 25, "Charlie", 35),
         )
-        results = conn.exec(
-            "SELECT name FROM test_table ORDER BY name LIMIT $1", (2,)
-        )
+        results = conn.exec("SELECT name FROM test_table ORDER BY name LIMIT $1", (2,))
         assert len(results) == 2
         conn.close()
 

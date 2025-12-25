@@ -15,7 +15,9 @@ class TestSyncQueryDropReturnsAffectedRows:
         """Test query_drop for single INSERT returns 1."""
         conn = Conn(get_test_db_url())
         setup_test_table_sync(conn)
-        affected = conn.query_drop("INSERT INTO test_table (name, age) VALUES ('Alice', 30)")
+        affected = conn.query_drop(
+            "INSERT INTO test_table (name, age) VALUES ('Alice', 30)"
+        )
         assert affected == 1
         assert isinstance(affected, int)
         conn.close()
@@ -89,11 +91,17 @@ class TestSyncQueryDropConnectionState:
         """Test multiple query_drop operations in sequence."""
         conn = Conn(get_test_db_url())
         setup_test_table_sync(conn)
-        affected1 = conn.query_drop("INSERT INTO test_table (name, age) VALUES ('Alice', 30)")
+        affected1 = conn.query_drop(
+            "INSERT INTO test_table (name, age) VALUES ('Alice', 30)"
+        )
         assert affected1 == 1
-        affected2 = conn.query_drop("INSERT INTO test_table (name, age) VALUES ('Bob', 25)")
+        affected2 = conn.query_drop(
+            "INSERT INTO test_table (name, age) VALUES ('Bob', 25)"
+        )
         assert affected2 == 1
-        affected3 = conn.query_drop("UPDATE test_table SET age = age + 1 WHERE name = 'Alice'")
+        affected3 = conn.query_drop(
+            "UPDATE test_table SET age = age + 1 WHERE name = 'Alice'"
+        )
         assert affected3 == 1
         affected4 = conn.query_drop("DELETE FROM test_table WHERE name = 'Bob'")
         assert affected4 == 1
@@ -105,7 +113,9 @@ class TestSyncQueryDropConnectionState:
         """Test query_drop followed by query."""
         conn = Conn(get_test_db_url())
         setup_test_table_sync(conn)
-        affected = conn.query_drop("INSERT INTO test_table (name, age) VALUES ('Alice', 30)")
+        affected = conn.query_drop(
+            "INSERT INTO test_table (name, age) VALUES ('Alice', 30)"
+        )
         assert affected == 1
         results = conn.query("SELECT name, age FROM test_table WHERE age = 30")
         assert len(results) == 1
@@ -152,6 +162,8 @@ class TestSyncQueryDropReturnType:
         """Test query_drop returns Python int."""
         conn = Conn(get_test_db_url())
         setup_test_table_sync(conn)
-        affected = conn.query_drop("INSERT INTO test_table (name, age) VALUES ('Alice', 30)")
+        affected = conn.query_drop(
+            "INSERT INTO test_table (name, age) VALUES ('Alice', 30)"
+        )
         assert isinstance(affected, int)
         conn.close()

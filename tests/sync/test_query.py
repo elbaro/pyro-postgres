@@ -74,7 +74,9 @@ class TestSyncQueryAsDict:
         setup_test_table_sync(conn)
         conn.query_drop("INSERT INTO test_table (name, age) VALUES ('Alice', 30)")
         conn.query_drop("INSERT INTO test_table (name, age) VALUES ('Bob', 25)")
-        results = conn.query("SELECT name, age FROM test_table ORDER BY name", as_dict=True)
+        results = conn.query(
+            "SELECT name, age FROM test_table ORDER BY name", as_dict=True
+        )
         assert len(results) == 2
         assert all(isinstance(r, dict) for r in results)
         assert results[0]["name"] == "Alice"
@@ -94,7 +96,9 @@ class TestSyncQueryAsDict:
         """Test query as_dict returns empty list when no rows match."""
         conn = Conn(get_test_db_url())
         setup_test_table_sync(conn)
-        results = conn.query("SELECT name FROM test_table WHERE age > 100", as_dict=True)
+        results = conn.query(
+            "SELECT name FROM test_table WHERE age > 100", as_dict=True
+        )
         assert results == []
         conn.close()
 
@@ -129,7 +133,9 @@ class TestSyncQueryMultipleRows:
         """Test query returns all matching rows."""
         conn = Conn(get_test_db_url())
         setup_test_table_sync(conn)
-        conn.query_drop("INSERT INTO test_table (name, age) VALUES ('Alice', 30), ('Bob', 25), ('Charlie', 35)")
+        conn.query_drop(
+            "INSERT INTO test_table (name, age) VALUES ('Alice', 30), ('Bob', 25), ('Charlie', 35)"
+        )
         results = conn.query("SELECT name FROM test_table ORDER BY name")
         assert len(results) == 3
         assert results[0][0] == "Alice"
@@ -141,7 +147,9 @@ class TestSyncQueryMultipleRows:
         """Test query with LIMIT clause."""
         conn = Conn(get_test_db_url())
         setup_test_table_sync(conn)
-        conn.query_drop("INSERT INTO test_table (name, age) VALUES ('Alice', 30), ('Bob', 25), ('Charlie', 35)")
+        conn.query_drop(
+            "INSERT INTO test_table (name, age) VALUES ('Alice', 30), ('Bob', 25), ('Charlie', 35)"
+        )
         results = conn.query("SELECT name FROM test_table ORDER BY name LIMIT 2")
         assert len(results) == 2
         conn.close()
@@ -150,7 +158,9 @@ class TestSyncQueryMultipleRows:
         """Test query with WHERE clause."""
         conn = Conn(get_test_db_url())
         setup_test_table_sync(conn)
-        conn.query_drop("INSERT INTO test_table (name, age) VALUES ('Alice', 30), ('Bob', 25), ('Charlie', 35)")
+        conn.query_drop(
+            "INSERT INTO test_table (name, age) VALUES ('Alice', 30), ('Bob', 25), ('Charlie', 35)"
+        )
         results = conn.query("SELECT name FROM test_table WHERE age > 28 ORDER BY name")
         assert len(results) == 2
         assert results[0][0] == "Alice"
