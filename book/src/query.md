@@ -20,7 +20,7 @@ class Conn:
 ```py
 rows: list = conn.query("SELECT field1, field2 FROM table")
 row = conn.query_first("SELECT ..")  # store only the first row and throw away others.
-conn.query_drop("INSERT ..")  # use `query_drop` not interested in ressult
+conn.query_drop("INSERT ..")  # use `query_drop` not interested in result
 ```
 
 ## Extended Query

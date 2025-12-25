@@ -363,13 +363,13 @@ impl AsyncConn {
 
         let inner = self.inner.clone();
 
-        rust_future_into_py::<_, ()>(py, async move {
+        rust_future_into_py::<_, Option<Py<PyAny>>>(py, async move {
             let mut guard = inner.lock().await;
             let conn = guard.as_mut().ok_or(Error::ConnectionClosedError)?;
 
             let adapters: Vec<_> = params_vec.iter().map(ParamsAdapter::new).collect();
             conn.exec_batch(query_string.as_str(), &adapters).await?;
-            Ok(())
+            Ok(None)
         })
     }
 

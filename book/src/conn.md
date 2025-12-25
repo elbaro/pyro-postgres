@@ -63,7 +63,7 @@ conn = Conn("pg://localhost/test?socket=/tmp/pg/.s.PGSQL.5432")
 By default, `Opts.prefer_unix_socket` is `True`.
 
 If `prefer_unix_socket` is True and the tcp peer IP is local, the library sends `SHOW unix_socket_directories` to get the unix socket path, and then tries to reconnect to `{unix_socket_directories}/.s.PGSQL.{opts.port}`.
-This upgrade happens transparently in connection time. If succeds, the constructor returns the new unix socket connection. If fails, returns the original TCP connection.
+This upgrade happens transparently in connection time. If succeeds, the constructor returns the new unix socket connection. If fails, returns the original TCP connection.
 
 ```
 conn = Conn("pg://test:1234@localhost")  # `socket` parameter is not provided, but `conn` can be a TCP connection or Unix socket connection.

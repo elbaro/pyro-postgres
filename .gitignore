@@ -1,4 +1,5 @@
 book/book
+/.claude
 /.cargo
 /target
 /CLAUDE.md

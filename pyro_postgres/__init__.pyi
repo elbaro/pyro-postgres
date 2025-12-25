@@ -63,7 +63,7 @@ class Opts:
         ...
 
     def port(self, port: int) -> "Opts":
-        """Set the TCP port number."""
+        """Set the TCP port number (default: 5432)."""
         ...
 
     def socket(self, path: str | None) -> "Opts":
@@ -82,12 +82,34 @@ class Opts:
         """Set the database name to connect to."""
         ...
 
-    def tcp_nodelay(self, enable: bool) -> "Opts":
-        """Enable or disable TCP_NODELAY socket option."""
+    def application_name(self, name: str | None) -> "Opts":
+        """Set the application name to report to the server."""
         ...
 
-    def tls(self, enable: bool) -> "Opts":
-        """Enable or disable TLS for the connection."""
+    def ssl_mode(self, mode: str) -> "Opts":
+        """
+        Set the SSL mode for the connection.
+
+        Args:
+            mode: One of "disable", "prefer", "require".
+        """
+        ...
+
+    def prefer_unix_socket(self, enable: bool) -> "Opts":
+        """
+        Enable or disable automatic upgrade from TCP to Unix socket.
+
+        When enabled and connected via TCP to loopback, the driver will query
+        `unix_socket_directories` and reconnect using the Unix socket for better performance.
+        """
+        ...
+
+    def pool_max_idle_conn(self, count: int) -> "Opts":
+        """Set the maximum number of idle connections in the pool (default: 100)."""
+        ...
+
+    def pool_max_concurrency(self, count: int | None) -> "Opts":
+        """Set the maximum number of concurrent connections (active + idle), or None for unlimited."""
         ...
 
 JsonEncodable = (
