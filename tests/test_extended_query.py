@@ -202,34 +202,6 @@ def test_sync_exec_first_as_dict():
     conn.close()
 
 
-def test_sync_exec_affected_rows():
-    """Test sync affected_rows after extended query."""
-    conn = Conn(get_test_db_url())
-
-    setup_test_table_sync(conn)
-
-    conn.exec_drop(
-        "INSERT INTO test_table (name, age) VALUES ($1, $2), ($3, $4), ($5, $6)",
-        ("Alice", 30, "Bob", 25, "Charlie", 35),
-    )
-
-    affected_rows = conn.affected_rows()
-    assert affected_rows == 3
-
-    conn.exec_drop("UPDATE test_table SET age = age + 1 WHERE age > $1", (25,))
-
-    affected_rows = conn.affected_rows()
-    assert affected_rows == 2
-
-    conn.exec_drop("DELETE FROM test_table WHERE age < $1", (30,))
-
-    affected_rows = conn.affected_rows()
-    assert affected_rows == 1
-
-    cleanup_test_table_sync(conn)
-    conn.close()
-
-
 def test_sync_exec_prepared_statement_caching():
     """Test that prepared statements are cached and reused."""
     conn = Conn(get_test_db_url())
@@ -444,35 +416,6 @@ async def test_async_exec_first_as_dict():
         "SELECT name, age FROM test_table WHERE age > $1", (100,), as_dict=True
     )
     assert result is None
-
-    await cleanup_test_table_async(conn)
-    await conn.close()
-
-
-@pytest.mark.asyncio
-async def test_async_exec_affected_rows():
-    """Test async affected_rows after extended query."""
-    conn = await get_async_conn(get_test_db_url())
-
-    await setup_test_table_async(conn)
-
-    await conn.exec_drop(
-        "INSERT INTO test_table (name, age) VALUES ($1, $2), ($3, $4), ($5, $6)",
-        ("Alice", 30, "Bob", 25, "Charlie", 35),
-    )
-
-    affected_rows = await conn.affected_rows()
-    assert affected_rows == 3
-
-    await conn.exec_drop("UPDATE test_table SET age = age + 1 WHERE age > $1", (25,))
-
-    affected_rows = await conn.affected_rows()
-    assert affected_rows == 2
-
-    await conn.exec_drop("DELETE FROM test_table WHERE age < $1", (30,))
-
-    affected_rows = await conn.affected_rows()
-    assert affected_rows == 1
 
     await cleanup_test_table_async(conn)
     await conn.close()

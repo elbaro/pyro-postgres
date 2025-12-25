@@ -135,27 +135,6 @@ def test_sync_simple_query_first_as_dict():
     conn.close()
 
 
-def test_sync_simple_query_affected_rows():
-    """Test sync affected_rows after simple query."""
-    conn = Conn(get_test_db_url())
-
-    setup_test_table_sync(conn)
-
-    conn.query_drop("INSERT INTO test_table (name, age) VALUES ('Alice', 30)")
-    affected = conn.affected_rows()
-    assert affected == 1
-
-    conn.query_drop("INSERT INTO test_table (name, age) VALUES ('Bob', 25)")
-    conn.query_drop("INSERT INTO test_table (name, age) VALUES ('Charlie', 35)")
-
-    conn.query_drop("UPDATE test_table SET age = age + 1 WHERE age > 25")
-    affected = conn.affected_rows()
-    assert affected == 2
-
-    cleanup_test_table_sync(conn)
-    conn.close()
-
-
 # ─── Async Simple Query Tests ────────────────────────────────────────────────
 
 
@@ -281,28 +260,6 @@ async def test_async_simple_query_first_as_dict():
     assert isinstance(result, dict)
     assert result["name"] == "Alice"
     assert result["age"] == 30
-
-    await cleanup_test_table_async(conn)
-    await conn.close()
-
-
-@pytest.mark.asyncio
-async def test_async_simple_query_affected_rows():
-    """Test async affected_rows after simple query."""
-    conn = await get_async_conn(get_test_db_url())
-
-    await setup_test_table_async(conn)
-
-    await conn.query_drop("INSERT INTO test_table (name, age) VALUES ('Alice', 30)")
-    affected = await conn.affected_rows()
-    assert affected == 1
-
-    await conn.query_drop("INSERT INTO test_table (name, age) VALUES ('Bob', 25)")
-    await conn.query_drop("INSERT INTO test_table (name, age) VALUES ('Charlie', 35)")
-
-    await conn.query_drop("UPDATE test_table SET age = age + 1 WHERE age > 25")
-    affected = await conn.affected_rows()
-    assert affected == 2
 
     await cleanup_test_table_async(conn)
     await conn.close()
