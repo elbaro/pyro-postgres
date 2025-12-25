@@ -22,7 +22,7 @@ class TestAsyncTransactionContextManager:
         conn = await Conn.new(get_test_db_url())
         await setup_test_table_async(conn)
 
-        async with conn.start_transaction() as txn:
+        async with conn.tx() as txn:
             await conn.query_drop(
                 "INSERT INTO test_table (name, age) VALUES ('Alice', 30)"
             )
@@ -42,7 +42,7 @@ class TestAsyncTransactionContextManager:
         await setup_test_table_async(conn)
 
         try:
-            async with conn.start_transaction() as txn:
+            async with conn.tx() as txn:
                 await conn.query_drop(
                     "INSERT INTO test_table (name, age) VALUES ('Alice', 30)"
                 )
@@ -63,7 +63,7 @@ class TestAsyncTransactionContextManager:
         conn = await Conn.new(get_test_db_url())
         await setup_test_table_async(conn)
 
-        async with conn.start_transaction() as txn:
+        async with conn.tx() as txn:
             await conn.query_drop(
                 "INSERT INTO test_table (name, age) VALUES ('Alice', 30)"
             )
@@ -92,7 +92,7 @@ class TestAsyncTransactionExplicit:
         conn = await Conn.new(get_test_db_url())
         await setup_test_table_async(conn)
 
-        txn = conn.start_transaction()
+        txn = conn.tx()
         async with txn:
             await conn.query_drop(
                 "INSERT INTO test_table (name, age) VALUES ('Alice', 30)"
@@ -112,7 +112,7 @@ class TestAsyncTransactionExplicit:
         conn = await Conn.new(get_test_db_url())
         await setup_test_table_async(conn)
 
-        txn = conn.start_transaction()
+        txn = conn.tx()
         async with txn:
             await conn.query_drop(
                 "INSERT INTO test_table (name, age) VALUES ('Alice', 30)"
@@ -130,7 +130,7 @@ class TestAsyncTransactionExplicit:
         """Test commit without starting transaction raises error."""
         conn = await Conn.new(get_test_db_url())
 
-        txn = conn.start_transaction()
+        txn = conn.tx()
         with pytest.raises(IncorrectApiUsageError):
             await txn.commit()
 
@@ -141,7 +141,7 @@ class TestAsyncTransactionExplicit:
         """Test rollback without starting transaction raises error."""
         conn = await Conn.new(get_test_db_url())
 
-        txn = conn.start_transaction()
+        txn = conn.tx()
         with pytest.raises(IncorrectApiUsageError):
             await txn.rollback()
 
@@ -152,7 +152,7 @@ class TestAsyncTransactionExplicit:
         """Test commit after commit raises error."""
         conn = await Conn.new(get_test_db_url())
 
-        txn = conn.start_transaction()
+        txn = conn.tx()
         async with txn:
             await txn.commit()
             with pytest.raises(TransactionClosedError):
@@ -165,7 +165,7 @@ class TestAsyncTransactionExplicit:
         """Test rollback after rollback raises error."""
         conn = await Conn.new(get_test_db_url())
 
-        txn = conn.start_transaction()
+        txn = conn.tx()
         async with txn:
             await txn.rollback()
             with pytest.raises(TransactionClosedError):
@@ -183,7 +183,7 @@ class TestAsyncTransactionIsolationLevel:
         conn = await Conn.new(get_test_db_url())
         await setup_test_table_async(conn)
 
-        async with conn.start_transaction(
+        async with conn.tx(
             isolation_level=IsolationLevel.ReadUncommitted
         ):
             await conn.query_drop(
@@ -202,7 +202,7 @@ class TestAsyncTransactionIsolationLevel:
         conn = await Conn.new(get_test_db_url())
         await setup_test_table_async(conn)
 
-        async with conn.start_transaction(isolation_level=IsolationLevel.ReadCommitted):
+        async with conn.tx(isolation_level=IsolationLevel.ReadCommitted):
             await conn.query_drop(
                 "INSERT INTO test_table (name, age) VALUES ('Alice', 30)"
             )
@@ -219,7 +219,7 @@ class TestAsyncTransactionIsolationLevel:
         conn = await Conn.new(get_test_db_url())
         await setup_test_table_async(conn)
 
-        async with conn.start_transaction(
+        async with conn.tx(
             isolation_level=IsolationLevel.RepeatableRead
         ):
             await conn.query_drop(
@@ -238,7 +238,7 @@ class TestAsyncTransactionIsolationLevel:
         conn = await Conn.new(get_test_db_url())
         await setup_test_table_async(conn)
 
-        async with conn.start_transaction(isolation_level=IsolationLevel.Serializable):
+        async with conn.tx(isolation_level=IsolationLevel.Serializable):
             await conn.query_drop(
                 "INSERT INTO test_table (name, age) VALUES ('Alice', 30)"
             )
@@ -262,7 +262,7 @@ class TestAsyncTransactionReadOnly:
         # Insert data first
         await conn.query_drop("INSERT INTO test_table (name, age) VALUES ('Alice', 30)")
 
-        async with conn.start_transaction(readonly=True):
+        async with conn.tx(readonly=True):
             # Reading should work
             result = await conn.query_first("SELECT name FROM test_table")
             assert result[0] == "Alice"
@@ -276,7 +276,7 @@ class TestAsyncTransactionReadOnly:
         conn = await Conn.new(get_test_db_url())
         await setup_test_table_async(conn)
 
-        async with conn.start_transaction(readonly=False):
+        async with conn.tx(readonly=False):
             await conn.query_drop(
                 "INSERT INTO test_table (name, age) VALUES ('Alice', 30)"
             )
@@ -295,7 +295,7 @@ class TestAsyncTransactionReadOnly:
 
         await conn.query_drop("INSERT INTO test_table (name, age) VALUES ('Alice', 30)")
 
-        async with conn.start_transaction(
+        async with conn.tx(
             isolation_level=IsolationLevel.Serializable, readonly=True
         ):
             result = await conn.query_first("SELECT name FROM test_table")

@@ -62,7 +62,7 @@ class Conn:
         """
         ...
 
-    def start_transaction(
+    def tx(
         self,
         isolation_level: IsolationLevel | None = None,
         readonly: bool | None = None,

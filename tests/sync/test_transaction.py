@@ -21,7 +21,7 @@ class TestSyncTransactionContextManager:
         conn = Conn(get_test_db_url())
         setup_test_table_sync(conn)
 
-        with conn.start_transaction() as txn:
+        with conn.tx() as txn:
             conn.query_drop("INSERT INTO test_table (name, age) VALUES ('Alice', 30)")
 
         # Data should be committed
@@ -38,7 +38,7 @@ class TestSyncTransactionContextManager:
         setup_test_table_sync(conn)
 
         try:
-            with conn.start_transaction() as txn:
+            with conn.tx() as txn:
                 conn.query_drop(
                     "INSERT INTO test_table (name, age) VALUES ('Alice', 30)"
                 )
@@ -58,7 +58,7 @@ class TestSyncTransactionContextManager:
         conn = Conn(get_test_db_url())
         setup_test_table_sync(conn)
 
-        with conn.start_transaction() as txn:
+        with conn.tx() as txn:
             conn.query_drop("INSERT INTO test_table (name, age) VALUES ('Alice', 30)")
             conn.query_drop("INSERT INTO test_table (name, age) VALUES ('Bob', 25)")
             conn.query_drop("UPDATE test_table SET age = age + 1 WHERE name = 'Alice'")
@@ -80,7 +80,7 @@ class TestSyncTransactionExplicit:
         conn = Conn(get_test_db_url())
         setup_test_table_sync(conn)
 
-        txn = conn.start_transaction()
+        txn = conn.tx()
         txn.begin()
         conn.query_drop("INSERT INTO test_table (name, age) VALUES ('Alice', 30)")
         txn.commit()
@@ -97,7 +97,7 @@ class TestSyncTransactionExplicit:
         conn = Conn(get_test_db_url())
         setup_test_table_sync(conn)
 
-        txn = conn.start_transaction()
+        txn = conn.tx()
         txn.begin()
         conn.query_drop("INSERT INTO test_table (name, age) VALUES ('Alice', 30)")
         txn.rollback()
@@ -112,7 +112,7 @@ class TestSyncTransactionExplicit:
         """Test commit without begin raises error."""
         conn = Conn(get_test_db_url())
 
-        txn = conn.start_transaction()
+        txn = conn.tx()
         with pytest.raises(IncorrectApiUsageError):
             txn.commit()
 
@@ -122,7 +122,7 @@ class TestSyncTransactionExplicit:
         """Test rollback without begin raises error."""
         conn = Conn(get_test_db_url())
 
-        txn = conn.start_transaction()
+        txn = conn.tx()
         with pytest.raises(IncorrectApiUsageError):
             txn.rollback()
 
@@ -132,7 +132,7 @@ class TestSyncTransactionExplicit:
         """Test calling begin twice raises error."""
         conn = Conn(get_test_db_url())
 
-        txn = conn.start_transaction()
+        txn = conn.tx()
         txn.begin()
         with pytest.raises(IncorrectApiUsageError):
             txn.begin()
@@ -144,7 +144,7 @@ class TestSyncTransactionExplicit:
         """Test commit after commit raises error."""
         conn = Conn(get_test_db_url())
 
-        txn = conn.start_transaction()
+        txn = conn.tx()
         txn.begin()
         txn.commit()
         with pytest.raises(TransactionClosedError):
@@ -156,7 +156,7 @@ class TestSyncTransactionExplicit:
         """Test rollback after rollback raises error."""
         conn = Conn(get_test_db_url())
 
-        txn = conn.start_transaction()
+        txn = conn.tx()
         txn.begin()
         txn.rollback()
         with pytest.raises(TransactionClosedError):
@@ -168,7 +168,7 @@ class TestSyncTransactionExplicit:
         """Test commit after rollback raises error."""
         conn = Conn(get_test_db_url())
 
-        txn = conn.start_transaction()
+        txn = conn.tx()
         txn.begin()
         txn.rollback()
         with pytest.raises(TransactionClosedError):
@@ -185,7 +185,7 @@ class TestSyncTransactionIsolationLevel:
         conn = Conn(get_test_db_url())
         setup_test_table_sync(conn)
 
-        with conn.start_transaction(isolation_level=IsolationLevel.ReadUncommitted):
+        with conn.tx(isolation_level=IsolationLevel.ReadUncommitted):
             conn.query_drop("INSERT INTO test_table (name, age) VALUES ('Alice', 30)")
 
         result = conn.query_first("SELECT name FROM test_table")
@@ -199,7 +199,7 @@ class TestSyncTransactionIsolationLevel:
         conn = Conn(get_test_db_url())
         setup_test_table_sync(conn)
 
-        with conn.start_transaction(isolation_level=IsolationLevel.ReadCommitted):
+        with conn.tx(isolation_level=IsolationLevel.ReadCommitted):
             conn.query_drop("INSERT INTO test_table (name, age) VALUES ('Alice', 30)")
 
         result = conn.query_first("SELECT name FROM test_table")
@@ -213,7 +213,7 @@ class TestSyncTransactionIsolationLevel:
         conn = Conn(get_test_db_url())
         setup_test_table_sync(conn)
 
-        with conn.start_transaction(isolation_level=IsolationLevel.RepeatableRead):
+        with conn.tx(isolation_level=IsolationLevel.RepeatableRead):
             conn.query_drop("INSERT INTO test_table (name, age) VALUES ('Alice', 30)")
 
         result = conn.query_first("SELECT name FROM test_table")
@@ -227,7 +227,7 @@ class TestSyncTransactionIsolationLevel:
         conn = Conn(get_test_db_url())
         setup_test_table_sync(conn)
 
-        with conn.start_transaction(isolation_level=IsolationLevel.Serializable):
+        with conn.tx(isolation_level=IsolationLevel.Serializable):
             conn.query_drop("INSERT INTO test_table (name, age) VALUES ('Alice', 30)")
 
         result = conn.query_first("SELECT name FROM test_table")
@@ -271,7 +271,7 @@ class TestSyncTransactionReadOnly:
         # Insert data first
         conn.query_drop("INSERT INTO test_table (name, age) VALUES ('Alice', 30)")
 
-        with conn.start_transaction(readonly=True):
+        with conn.tx(readonly=True):
             # Reading should work
             result = conn.query_first("SELECT name FROM test_table")
             assert result[0] == "Alice"
@@ -284,7 +284,7 @@ class TestSyncTransactionReadOnly:
         conn = Conn(get_test_db_url())
         setup_test_table_sync(conn)
 
-        with conn.start_transaction(readonly=False):
+        with conn.tx(readonly=False):
             conn.query_drop("INSERT INTO test_table (name, age) VALUES ('Alice', 30)")
 
         result = conn.query_first("SELECT name FROM test_table")
@@ -300,7 +300,7 @@ class TestSyncTransactionReadOnly:
 
         conn.query_drop("INSERT INTO test_table (name, age) VALUES ('Alice', 30)")
 
-        with conn.start_transaction(
+        with conn.tx(
             isolation_level=IsolationLevel.Serializable, readonly=True
         ):
             result = conn.query_first("SELECT name FROM test_table")

@@ -58,7 +58,7 @@ impl AsyncConn {
     }
 
     #[pyo3(signature = (isolation_level=None, readonly=None))]
-    fn start_transaction(
+    fn tx(
         slf: Py<Self>,
         isolation_level: Option<&IsolationLevel>,
         readonly: Option<bool>,

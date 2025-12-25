@@ -2,7 +2,7 @@
 
 Pipelining is an advanced feature to reduce the client-side waiting and the number of network round trips.
 
-Use `conn.exec_batch` for executing many homogeneous queries,
+Use `conn.exec_batch` for executing many homogeneous queries, \
 and `conn.pipeline` for executing many heterogenous queries.
 
 ```py
@@ -45,7 +45,7 @@ with conn.pipeline() as p:
 
     rows = p.claim(t1)
     p.claim_drop(t2)
-    p.claim_drop(t3)   
+    p.claim_drop(t3)
 ```
 
 On exit of pipeline context manager, any pending response is read and dropped.
