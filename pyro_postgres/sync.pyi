@@ -48,10 +48,6 @@ class Conn:
         readonly: bool | None = None,
     ) -> Transaction: ...
     def id(self) -> int: ...
-    def affected_rows(self) -> int | None:
-        """Get the number of affected rows from the last operation."""
-        ...
-
     def ping(self) -> None:
         """Ping the server to check connection."""
         ...
@@ -100,12 +96,15 @@ class Conn:
         """
         ...
 
-    def query_drop(self, query: str) -> None:
+    def query_drop(self, query: str) -> int:
         """
         Execute a query using text protocol and discard the results.
 
         Args:
             query: SQL query string.
+
+        Returns:
+            Number of rows affected by the query.
         """
         ...
 
@@ -157,13 +156,16 @@ class Conn:
         """
         ...
 
-    def exec_drop(self, query: str, params: Params = None) -> None:
+    def exec_drop(self, query: str, params: Params = None) -> int:
         """
         Execute a query using extended protocol and discard the results.
 
         Args:
             query: SQL query string with $1, $2, ... placeholders.
             params: Query parameters.
+
+        Returns:
+            Number of rows affected by the query.
         """
         ...
 

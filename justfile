@@ -21,4 +21,3 @@ publish:
     patchelf --remove-rpath target/wheels/pyro_postgres/pyro_postgres.abi3.so
     cd target/wheels && 7z u *.whl pyro_postgres/pyro_postgres.abi3.so
     maturin upload target/wheels/*.whl
-

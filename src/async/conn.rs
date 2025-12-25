@@ -27,7 +27,6 @@ pub struct AsyncConn {
     pub stmt_cache: Arc<Mutex<HashMap<String, PreparedStatement>>>,
     tuple_handler: Arc<Mutex<TupleHandler>>,
     dict_handler: Arc<Mutex<DictHandler>>,
-    affected_rows: Arc<Mutex<Option<u64>>>,
 }
 
 #[pymethods]
@@ -52,7 +51,6 @@ impl AsyncConn {
                 stmt_cache: Arc::new(Mutex::new(HashMap::new())),
                 tuple_handler: Arc::new(Mutex::new(TupleHandler::new())),
                 dict_handler: Arc::new(Mutex::new(DictHandler::new())),
-                affected_rows: Arc::new(Mutex::new(None)),
             })
         })
     }
@@ -89,11 +87,6 @@ impl AsyncConn {
             let conn = guard.as_ref().ok_or(Error::ConnectionClosedError)?;
             Ok(conn.connection_id())
         })
-    }
-
-    fn affected_rows(&self, py: Python<'_>) -> PyResult<Py<PyroFuture>> {
-        let affected_rows = self.affected_rows.clone();
-        rust_future_into_py(py, async move { Ok(*affected_rows.lock().await) })
     }
 
     fn close(&self, py: Python<'_>) -> PyResult<Py<PyroFuture>> {
@@ -136,7 +129,6 @@ impl AsyncConn {
         let inner = self.inner.clone();
         let tuple_handler = self.tuple_handler.clone();
         let dict_handler = self.dict_handler.clone();
-        let affected_rows_arc = self.affected_rows.clone();
 
         rust_future_into_py::<_, Vec<Py<PyAny>>>(py, async move {
             let mut guard = inner.lock().await;
@@ -146,7 +138,6 @@ impl AsyncConn {
                 let mut handler = dict_handler.lock().await;
                 handler.clear();
                 conn.query(&query, &mut *handler).await?;
-                *affected_rows_arc.lock().await = handler.rows_affected();
                 Python::attach(|py| {
                     let rows: Vec<Py<PyDict>> = handler.rows_to_python(py)?;
                     Ok(rows.into_iter().map(pyo3::Py::into_any).collect())
@@ -155,7 +146,6 @@ impl AsyncConn {
                 let mut handler = tuple_handler.lock().await;
                 handler.clear();
                 conn.query(&query, &mut *handler).await?;
-                *affected_rows_arc.lock().await = handler.rows_affected();
                 Python::attach(|py| {
                     let rows: Vec<Py<PyTuple>> = handler.rows_to_python(py)?;
                     Ok(rows.into_iter().map(pyo3::Py::into_any).collect())
@@ -174,7 +164,6 @@ impl AsyncConn {
         let inner = self.inner.clone();
         let tuple_handler = self.tuple_handler.clone();
         let dict_handler = self.dict_handler.clone();
-        let affected_rows_arc = self.affected_rows.clone();
 
         rust_future_into_py::<_, Option<Py<PyAny>>>(py, async move {
             let mut guard = inner.lock().await;
@@ -184,7 +173,6 @@ impl AsyncConn {
                 let mut handler = dict_handler.lock().await;
                 handler.clear();
                 conn.query(&query, &mut *handler).await?;
-                *affected_rows_arc.lock().await = handler.rows_affected();
                 Python::attach(|py| {
                     let rows = handler.rows_to_python(py)?;
                     Ok(rows.into_iter().next().map(pyo3::Py::into_any))
@@ -193,7 +181,6 @@ impl AsyncConn {
                 let mut handler = tuple_handler.lock().await;
                 handler.clear();
                 conn.query(&query, &mut *handler).await?;
-                *affected_rows_arc.lock().await = handler.rows_affected();
                 Python::attach(|py| {
                     let rows = handler.rows_to_python(py)?;
                     Ok(rows.into_iter().next().map(pyo3::Py::into_any))
@@ -204,17 +191,15 @@ impl AsyncConn {
 
     fn query_drop(&self, py: Python<'_>, query: String) -> PyResult<Py<PyroFuture>> {
         let inner = self.inner.clone();
-        let affected_rows_arc = self.affected_rows.clone();
 
-        rust_future_into_py::<_, ()>(py, async move {
+        rust_future_into_py::<_, u64>(py, async move {
             let mut guard = inner.lock().await;
             let conn = guard.as_mut().ok_or(Error::ConnectionClosedError)?;
 
             let mut handler = DropHandler::default();
             conn.query(&query, &mut handler).await?;
 
-            *affected_rows_arc.lock().await = handler.rows_affected;
-            Ok(())
+            Ok(handler.rows_affected.unwrap_or(0))
         })
     }
 
@@ -238,7 +223,6 @@ impl AsyncConn {
         let stmt_cache = self.stmt_cache.clone();
         let tuple_handler = self.tuple_handler.clone();
         let dict_handler = self.dict_handler.clone();
-        let affected_rows_arc = self.affected_rows.clone();
 
         rust_future_into_py::<_, Vec<Py<PyAny>>>(py, async move {
             let mut guard = inner.lock().await;
@@ -257,7 +241,6 @@ impl AsyncConn {
                 let mut handler = dict_handler.lock().await;
                 handler.clear();
                 conn.exec(stmt, params_adapter, &mut *handler).await?;
-                *affected_rows_arc.lock().await = handler.rows_affected();
                 Python::attach(|py| {
                     let rows: Vec<Py<PyDict>> = handler.rows_to_python(py)?;
                     Ok(rows.into_iter().map(pyo3::Py::into_any).collect())
@@ -266,7 +249,6 @@ impl AsyncConn {
                 let mut handler = tuple_handler.lock().await;
                 handler.clear();
                 conn.exec(stmt, params_adapter, &mut *handler).await?;
-                *affected_rows_arc.lock().await = handler.rows_affected();
                 Python::attach(|py| {
                     let rows: Vec<Py<PyTuple>> = handler.rows_to_python(py)?;
                     Ok(rows.into_iter().map(pyo3::Py::into_any).collect())
@@ -293,7 +275,6 @@ impl AsyncConn {
         let stmt_cache = self.stmt_cache.clone();
         let tuple_handler = self.tuple_handler.clone();
         let dict_handler = self.dict_handler.clone();
-        let affected_rows_arc = self.affected_rows.clone();
 
         rust_future_into_py::<_, Option<Py<PyAny>>>(py, async move {
             let mut guard = inner.lock().await;
@@ -312,7 +293,6 @@ impl AsyncConn {
                 let mut handler = dict_handler.lock().await;
                 handler.clear();
                 conn.exec(stmt, params_adapter, &mut *handler).await?;
-                *affected_rows_arc.lock().await = handler.rows_affected();
                 Python::attach(|py| {
                     let rows = handler.rows_to_python(py)?;
                     Ok(rows.into_iter().next().map(pyo3::Py::into_any))
@@ -321,7 +301,6 @@ impl AsyncConn {
                 let mut handler = tuple_handler.lock().await;
                 handler.clear();
                 conn.exec(stmt, params_adapter, &mut *handler).await?;
-                *affected_rows_arc.lock().await = handler.rows_affected();
                 Python::attach(|py| {
                     let rows = handler.rows_to_python(py)?;
                     Ok(rows.into_iter().next().map(pyo3::Py::into_any))
@@ -345,9 +324,8 @@ impl AsyncConn {
 
         let inner = self.inner.clone();
         let stmt_cache = self.stmt_cache.clone();
-        let affected_rows_arc = self.affected_rows.clone();
 
-        rust_future_into_py::<_, ()>(py, async move {
+        rust_future_into_py::<_, u64>(py, async move {
             let mut guard = inner.lock().await;
             let conn = guard.as_mut().ok_or(Error::ConnectionClosedError)?;
 
@@ -363,8 +341,7 @@ impl AsyncConn {
             let params_adapter = ParamsAdapter::new(&params_obj);
             conn.exec(stmt, params_adapter, &mut handler).await?;
 
-            *affected_rows_arc.lock().await = handler.rows_affected;
-            Ok(())
+            Ok(handler.rows_affected.unwrap_or(0))
         })
     }
 
@@ -439,7 +416,6 @@ impl AsyncConn {
         let mut handler = DropHandler::default();
         conn.query(&query, &mut handler).await?;
 
-        *self.affected_rows.lock().await = handler.rows_affected;
         Ok(())
     }
 }

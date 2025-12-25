@@ -22,7 +22,6 @@ pub struct SyncConn {
     pub inner: Mutex<Option<Conn>>,
     pub in_transaction: AtomicBool,
     pub stmt_cache: Mutex<HashMap<String, PreparedStatement>>,
-    affected_rows: Mutex<Option<u64>>,
 }
 
 #[pymethods]
@@ -37,7 +36,6 @@ impl SyncConn {
             inner: Mutex::new(Some(conn)),
             in_transaction: AtomicBool::new(false),
             stmt_cache: Mutex::new(HashMap::new()),
-            affected_rows: Mutex::new(None),
         })
     }
 
@@ -72,10 +70,6 @@ impl SyncConn {
         Ok(conn.connection_id())
     }
 
-    fn affected_rows(&self) -> PyResult<Option<u64>> {
-        Ok(*self.affected_rows.lock())
-    }
-
     fn ping(&self) -> PyroResult<()> {
         let mut guard = self.inner.lock();
         let conn = guard.as_mut().ok_or(Error::ConnectionClosedError)?;
@@ -93,13 +87,11 @@ impl SyncConn {
         if as_dict {
             let mut handler = DictHandler::new(py);
             conn.query(&query, &mut handler)?;
-            *self.affected_rows.lock() = handler.rows_affected();
             let rows = handler.into_rows();
             Ok(rows.bind(py).iter().map(pyo3::Bound::unbind).collect())
         } else {
             let mut handler = TupleHandler::new(py);
             conn.query(&query, &mut handler)?;
-            *self.affected_rows.lock() = handler.rows_affected();
             let rows = handler.into_rows();
             Ok(rows.bind(py).iter().map(pyo3::Bound::unbind).collect())
         }
@@ -118,7 +110,6 @@ impl SyncConn {
         if as_dict {
             let mut handler = DictHandler::new(py);
             conn.query(&query, &mut handler)?;
-            *self.affected_rows.lock() = handler.rows_affected();
             let rows = handler.into_rows();
             Ok(if rows.bind(py).len() > 0 {
                 Some(rows.bind(py).get_item(0)?.unbind())
@@ -128,7 +119,6 @@ impl SyncConn {
         } else {
             let mut handler = TupleHandler::new(py);
             conn.query(&query, &mut handler)?;
-            *self.affected_rows.lock() = handler.rows_affected();
             let rows = handler.into_rows();
             Ok(if rows.bind(py).len() > 0 {
                 Some(rows.bind(py).get_item(0)?.unbind())
@@ -139,15 +129,14 @@ impl SyncConn {
     }
 
     #[pyo3(signature = (query))]
-    fn query_drop(&self, query: String) -> PyroResult<()> {
+    fn query_drop(&self, query: String) -> PyroResult<u64> {
         let mut guard = self.inner.lock();
         let conn = guard.as_mut().ok_or(Error::ConnectionClosedError)?;
 
         let mut handler = DropHandler::default();
         conn.query(&query, &mut handler)?;
 
-        *self.affected_rows.lock() = handler.rows_affected;
-        Ok(())
+        Ok(handler.rows_affected.unwrap_or(0))
     }
 
     // ─── Extended Query Protocol (Binary) ─────────────────────────────────────
@@ -175,12 +164,10 @@ impl SyncConn {
         if as_dict {
             let mut handler = DictHandler::new(py);
             conn.exec(stmt, params_adapter, &mut handler)?;
-            *self.affected_rows.lock() = handler.rows_affected();
             Ok(handler.into_rows())
         } else {
             let mut handler = TupleHandler::new(py);
             conn.exec(stmt, params_adapter, &mut handler)?;
-            *self.affected_rows.lock() = handler.rows_affected();
             Ok(handler.into_rows())
         }
     }
@@ -208,7 +195,6 @@ impl SyncConn {
         if as_dict {
             let mut handler = DictHandler::new(py);
             conn.exec(stmt, params_adapter, &mut handler)?;
-            *self.affected_rows.lock() = handler.rows_affected();
             let rows = handler.into_rows();
             Ok(if rows.bind(py).len() > 0 {
                 Some(rows.bind(py).get_item(0)?.unbind())
@@ -218,7 +204,6 @@ impl SyncConn {
         } else {
             let mut handler = TupleHandler::new(py);
             conn.exec(stmt, params_adapter, &mut handler)?;
-            *self.affected_rows.lock() = handler.rows_affected();
             let rows = handler.into_rows();
             Ok(if rows.bind(py).len() > 0 {
                 Some(rows.bind(py).get_item(0)?.unbind())
@@ -229,7 +214,7 @@ impl SyncConn {
     }
 
     #[pyo3(signature = (query, params=Params::default()))]
-    fn exec_drop(&self, query: String, params: Params) -> PyroResult<()> {
+    fn exec_drop(&self, query: String, params: Params) -> PyroResult<u64> {
         let mut guard = self.inner.lock();
         let conn = guard.as_mut().ok_or(Error::ConnectionClosedError)?;
 
@@ -245,8 +230,7 @@ impl SyncConn {
         let params_adapter = ParamsAdapter::new(&params);
         conn.exec(stmt, params_adapter, &mut handler)?;
 
-        *self.affected_rows.lock() = handler.rows_affected;
-        Ok(())
+        Ok(handler.rows_affected.unwrap_or(0))
     }
 
     /// Execute a statement with multiple parameter sets in a batch.
@@ -315,7 +299,6 @@ impl SyncConn {
         let mut handler = DropHandler::default();
         conn.query(&query, &mut handler)?;
 
-        *self.affected_rows.lock() = handler.rows_affected;
         Ok(())
     }
 }

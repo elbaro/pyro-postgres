@@ -80,7 +80,6 @@ class Conn:
         ...
 
     async def id(self) -> int: ...
-    async def affected_rows(self) -> int | None: ...
     def ping(self) -> PyroFuture[None]:
         """Ping the server to check connection."""
         ...
@@ -131,12 +130,15 @@ class Conn:
         """
         ...
 
-    def query_drop(self, query: str) -> PyroFuture[None]:
+    def query_drop(self, query: str) -> PyroFuture[int]:
         """
         Execute a query using text protocol and discard the results.
 
         Args:
             query: SQL query string.
+
+        Returns:
+            Number of rows affected by the query.
         """
         ...
 
@@ -188,13 +190,16 @@ class Conn:
         """
         ...
 
-    def exec_drop(self, query: str, params: Params = None) -> PyroFuture[None]:
+    def exec_drop(self, query: str, params: Params = None) -> PyroFuture[int]:
         """
         Execute a query using extended protocol and discard the results.
 
         Args:
             query: SQL query string with $1, $2, ... placeholders.
             params: Query parameters.
+
+        Returns:
+            Number of rows affected by the query.
         """
         ...
 

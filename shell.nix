@@ -33,6 +33,5 @@ pkgs.mkShell {
   shellHook = ''
     export PYTHONPATH=.
     export DATABASE_URL="postgres://test:1234@localhost:5432/test?prefer_unix_socket=false"
-    echo "pyro-postgres $(python --version)"
   '';
 }

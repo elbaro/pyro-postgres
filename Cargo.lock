@@ -1505,6 +1505,8 @@ dependencies = [
 [[package]]
 name = "zero-postgres"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "95b0bad3bebd6026b67df504d419d32a9e2d1bb3f4d6bc66bdb7a3766ea96e90"
 dependencies = [
  "base64",
  "crossbeam-queue",
