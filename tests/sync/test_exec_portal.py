@@ -14,11 +14,11 @@ class TestSyncExecPortalBasic:
 
         with conn.tx() as tx:
             portal = tx.exec_portal("SELECT generate_series(1, 5) as n")
-            rows = portal.execute_collect(conn, 0)  # 0 = fetch all
+            rows = portal.exec_collect(0)  # 0 = fetch all
             assert portal.is_complete()
             total = sum(row[0] for row in rows)
             assert total == 15  # 1+2+3+4+5
-            portal.close(conn)
+            portal.close()
 
         conn.close()
 
@@ -31,7 +31,7 @@ class TestSyncExecPortalBasic:
             portal = tx.exec_portal("SELECT generate_series(1, 10) as n")
             batches = 0
             while True:
-                rows = portal.execute_collect(conn, 3)  # fetch 3 at a time
+                rows = portal.exec_collect(3)  # fetch 3 at a time
                 all_rows.extend(row[0] for row in rows)
                 batches += 1
                 if portal.is_complete():
@@ -39,7 +39,7 @@ class TestSyncExecPortalBasic:
 
             assert batches == 4  # 3+3+3+1 rows in 4 batches
             assert all_rows == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-            portal.close(conn)
+            portal.close()
 
         conn.close()
 
@@ -49,11 +49,11 @@ class TestSyncExecPortalBasic:
 
         with conn.tx() as tx:
             portal = tx.exec_portal("SELECT 42 as n")
-            rows = portal.execute_collect(conn, 0)
+            rows = portal.exec_collect(0)
             assert portal.is_complete()
             assert len(rows) == 1
             assert rows[0][0] == 42
-            portal.close(conn)
+            portal.close()
 
         conn.close()
 
@@ -63,10 +63,10 @@ class TestSyncExecPortalBasic:
 
         with conn.tx() as tx:
             portal = tx.exec_portal("SELECT 1 WHERE false")
-            rows = portal.execute_collect(conn, 0)
+            rows = portal.exec_collect(0)
             assert portal.is_complete()
             assert len(rows) == 0
-            portal.close(conn)
+            portal.close()
 
         conn.close()
 
@@ -80,11 +80,11 @@ class TestSyncExecPortalAsDict:
 
         with conn.tx() as tx:
             portal = tx.exec_portal("SELECT 1 as a, 2 as b, 3 as c")
-            rows = portal.execute_collect(conn, 0, as_dict=True)
+            rows = portal.exec_collect(0, as_dict=True)
             assert portal.is_complete()
             assert len(rows) == 1
             assert rows[0] == {"a": 1, "b": 2, "c": 3}
-            portal.close(conn)
+            portal.close()
 
         conn.close()
 
@@ -107,8 +107,8 @@ class TestSyncExecPortalInterleaving:
 
             # Interleave fetching from both portals
             while True:
-                rows1 = portal1.execute_collect(conn, 3)
-                rows2 = portal2.execute_collect(conn, 3)
+                rows1 = portal1.exec_collect(3)
+                rows2 = portal2.exec_collect(3)
                 all_rows1.extend(row[0] for row in rows1)
                 all_rows2.extend(row[0] for row in rows2)
                 if portal1.is_complete() and portal2.is_complete():
@@ -118,8 +118,8 @@ class TestSyncExecPortalInterleaving:
             assert all_rows1 == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
             assert all_rows2 == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
-            portal1.close(conn)
-            portal2.close(conn)
+            portal1.close()
+            portal2.close()
 
         conn.close()
 
@@ -142,8 +142,8 @@ class TestSyncExecPortalInterleaving:
 
             # Interleave fetching from both portals
             while True:
-                rows1 = portal1.execute_collect(conn, 2)
-                rows2 = portal2.execute_collect(conn, 2)
+                rows1 = portal1.exec_collect(2)
+                rows2 = portal2.exec_collect(2)
                 all_rows1.extend(row[0] for row in rows1)
                 all_rows2.extend(row[0] for row in rows2)
                 if portal1.is_complete() and portal2.is_complete():
@@ -152,8 +152,8 @@ class TestSyncExecPortalInterleaving:
             assert all_rows1 == [1, 2, 3, 4, 5]
             assert all_rows2 == [10, 11, 12, 13, 14, 15]
 
-            portal1.close(conn)
-            portal2.close(conn)
+            portal1.close()
+            portal2.close()
 
         conn.close()
 
@@ -180,7 +180,7 @@ class TestSyncExecPortalWithTable:
             ages_sum = 0
 
             while True:
-                rows = portal.execute_collect(conn, 25)  # 25 rows per batch
+                rows = portal.exec_collect(25)  # 25 rows per batch
                 for row in rows:
                     processed_count += 1
                     ages_sum += row[2]  # age is third column (id, name, age)
@@ -190,6 +190,6 @@ class TestSyncExecPortalWithTable:
             assert processed_count == 100
             assert ages_sum == sum(range(100))  # 0+1+2+...+99
 
-            portal.close(conn)
+            portal.close()
 
         conn.close()

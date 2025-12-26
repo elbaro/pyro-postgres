@@ -145,14 +145,14 @@ impl SyncTransaction {
     ///     portal2 = tx.exec_portal("SELECT * FROM table2")
     ///
     ///     while True:
-    ///         rows1 = portal1.execute_collect(conn, 100)
-    ///         rows2 = portal2.execute_collect(conn, 100)
+    ///         rows1 = portal1.exec_collect(100)
+    ///         rows2 = portal2.exec_collect(100)
     ///         process(rows1, rows2)
     ///         if portal1.is_complete() and portal2.is_complete():
     ///             break
     ///
-    ///     portal1.close(conn)
-    ///     portal2.close(conn)
+    ///     portal1.close()
+    ///     portal2.close()
     /// ```
     #[pyo3(signature = (query, params=Params::default()))]
     fn exec_portal(
@@ -183,6 +183,6 @@ impl SyncTransaction {
         let params_adapter = ParamsAdapter::new(&params);
         inner.lowlevel_bind(&portal_name, &stmt.wire_name(), params_adapter)?;
 
-        Ok(SyncNamedPortal::new(portal_name))
+        Ok(SyncNamedPortal::new(portal_name, self.conn.clone_ref(py)))
     }
 }

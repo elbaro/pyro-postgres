@@ -17,11 +17,11 @@ class TestAsyncExecPortalBasic:
 
         async with conn.tx() as tx:
             portal = await tx.exec_portal("SELECT generate_series(1, 5) as n")
-            rows, has_more = await portal.execute_collect(conn, 0)  # 0 = fetch all
+            rows, has_more = await portal.exec_collect(0)  # 0 = fetch all
             assert not has_more
             total = sum(row[0] for row in rows)
             assert total == 15  # 1+2+3+4+5
-            await portal.close(conn)
+            await portal.close()
 
         await conn.close()
 
@@ -35,9 +35,7 @@ class TestAsyncExecPortalBasic:
             portal = await tx.exec_portal("SELECT generate_series(1, 10) as n")
             batches = 0
             while True:
-                rows, has_more = await portal.execute_collect(
-                    conn, 3
-                )  # fetch 3 at a time
+                rows, has_more = await portal.exec_collect(3)  # fetch 3 at a time
                 all_rows.extend(row[0] for row in rows)
                 batches += 1
                 if not has_more:
@@ -45,7 +43,7 @@ class TestAsyncExecPortalBasic:
 
             assert batches == 4  # 3+3+3+1 rows in 4 batches
             assert all_rows == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-            await portal.close(conn)
+            await portal.close()
 
         await conn.close()
 
@@ -56,11 +54,11 @@ class TestAsyncExecPortalBasic:
 
         async with conn.tx() as tx:
             portal = await tx.exec_portal("SELECT 42 as n")
-            rows, has_more = await portal.execute_collect(conn, 0)
+            rows, has_more = await portal.exec_collect(0)
             assert not has_more
             assert len(rows) == 1
             assert rows[0][0] == 42
-            await portal.close(conn)
+            await portal.close()
 
         await conn.close()
 
@@ -71,10 +69,10 @@ class TestAsyncExecPortalBasic:
 
         async with conn.tx() as tx:
             portal = await tx.exec_portal("SELECT 1 WHERE false")
-            rows, has_more = await portal.execute_collect(conn, 0)
+            rows, has_more = await portal.exec_collect(0)
             assert not has_more
             assert len(rows) == 0
-            await portal.close(conn)
+            await portal.close()
 
         await conn.close()
 
@@ -89,11 +87,11 @@ class TestAsyncExecPortalAsDict:
 
         async with conn.tx() as tx:
             portal = await tx.exec_portal("SELECT 1 as a, 2 as b, 3 as c")
-            rows, has_more = await portal.execute_collect(conn, 0, as_dict=True)
+            rows, has_more = await portal.exec_collect(0, as_dict=True)
             assert not has_more
             assert len(rows) == 1
             assert rows[0] == {"a": 1, "b": 2, "c": 3}
-            await portal.close(conn)
+            await portal.close()
 
         await conn.close()
 
@@ -117,8 +115,8 @@ class TestAsyncExecPortalInterleaving:
 
             # Interleave fetching from both portals
             while True:
-                rows1, has_more1 = await portal1.execute_collect(conn, 3)
-                rows2, has_more2 = await portal2.execute_collect(conn, 3)
+                rows1, has_more1 = await portal1.exec_collect(3)
+                rows2, has_more2 = await portal2.exec_collect(3)
                 all_rows1.extend(row[0] for row in rows1)
                 all_rows2.extend(row[0] for row in rows2)
                 if not has_more1 and not has_more2:
@@ -128,8 +126,8 @@ class TestAsyncExecPortalInterleaving:
             assert all_rows1 == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
             assert all_rows2 == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
-            await portal1.close(conn)
-            await portal2.close(conn)
+            await portal1.close()
+            await portal2.close()
 
         await conn.close()
 
@@ -153,8 +151,8 @@ class TestAsyncExecPortalInterleaving:
 
             # Interleave fetching from both portals
             while True:
-                rows1, has_more1 = await portal1.execute_collect(conn, 2)
-                rows2, has_more2 = await portal2.execute_collect(conn, 2)
+                rows1, has_more1 = await portal1.exec_collect(2)
+                rows2, has_more2 = await portal2.exec_collect(2)
                 all_rows1.extend(row[0] for row in rows1)
                 all_rows2.extend(row[0] for row in rows2)
                 if not has_more1 and not has_more2:
@@ -163,8 +161,8 @@ class TestAsyncExecPortalInterleaving:
             assert all_rows1 == [1, 2, 3, 4, 5]
             assert all_rows2 == [10, 11, 12, 13, 14, 15]
 
-            await portal1.close(conn)
-            await portal2.close(conn)
+            await portal1.close()
+            await portal2.close()
 
         await conn.close()
 
@@ -194,9 +192,7 @@ class TestAsyncExecPortalWithTable:
             ages_sum = 0
 
             while True:
-                rows, has_more = await portal.execute_collect(
-                    conn, 25
-                )  # 25 rows per batch
+                rows, has_more = await portal.exec_collect(25)  # 25 rows per batch
                 for row in rows:
                     processed_count += 1
                     ages_sum += row[2]  # age is third column (id, name, age)
@@ -206,6 +202,6 @@ class TestAsyncExecPortalWithTable:
             assert processed_count == 100
             assert ages_sum == sum(range(100))  # 0+1+2+...+99
 
-            await portal.close(conn)
+            await portal.close()
 
         await conn.close()

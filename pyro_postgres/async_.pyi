@@ -60,19 +60,19 @@ class NamedPortal:
     can be interleaved - you can create multiple portals and fetch from them
     alternately. Named portals must be created within an explicit transaction.
 
-    Use `execute_collect()` to fetch rows and `close()` to release resources.
+    Use `exec_collect()` to fetch rows and `close()` to release resources.
     """
 
     @overload
-    def execute_collect(
-        self, conn: "Conn", max_rows: int, *, as_dict: Literal[False] = False
+    def exec_collect(
+        self, max_rows: int, *, as_dict: Literal[False] = False
     ) -> PyroFuture[tuple[list[tuple[Any, ...]], bool]]: ...
     @overload
-    def execute_collect(
-        self, conn: "Conn", max_rows: int, *, as_dict: Literal[True]
+    def exec_collect(
+        self, max_rows: int, *, as_dict: Literal[True]
     ) -> PyroFuture[tuple[list[dict[str, Any]], bool]]: ...
-    def execute_collect(
-        self, conn: "Conn", max_rows: int, *, as_dict: bool = False
+    def exec_collect(
+        self, max_rows: int, *, as_dict: bool = False
     ) -> PyroFuture[
         tuple[list[tuple[Any, ...]], bool] | tuple[list[dict[str, Any]], bool]
     ]:
@@ -80,7 +80,6 @@ class NamedPortal:
         Execute the portal and collect up to `max_rows` rows.
 
         Args:
-            conn: The connection to use for fetching.
             max_rows: Maximum number of rows to fetch. Use 0 to fetch all remaining rows.
             as_dict: If True, return rows as dictionaries. If False (default), return rows as tuples.
 
@@ -95,15 +94,15 @@ class NamedPortal:
         """
         Check if all rows have been fetched from this portal.
 
-        Note: For async, use the `has_more` return value from `execute_collect()` instead,
+        Note: For async, use the `has_more` return value from `exec_collect()` instead,
         as this property cannot be updated from async operations.
 
         Returns:
-            True if the last `execute_collect()` call fetched all remaining rows.
+            True if the last `exec_collect()` call fetched all remaining rows.
         """
         ...
 
-    def close(self, conn: "Conn") -> PyroFuture[None]:
+    def close(self) -> PyroFuture[None]:
         """
         Close the portal, releasing server resources.
 
@@ -165,14 +164,14 @@ class Transaction:
                 portal2 = await tx.exec_portal("SELECT * FROM table2")
 
                 while True:
-                    rows1, has_more1 = await portal1.execute_collect(conn, 100)
-                    rows2, has_more2 = await portal2.execute_collect(conn, 100)
+                    rows1, has_more1 = await portal1.exec_collect(100)
+                    rows2, has_more2 = await portal2.exec_collect(100)
                     process(rows1, rows2)
                     if not has_more1 and not has_more2:
                         break
 
-                await portal1.close(conn)
-                await portal2.close(conn)
+                await portal1.close()
+                await portal2.close()
             ```
         """
         ...

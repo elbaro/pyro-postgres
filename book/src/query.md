@@ -65,10 +65,10 @@ for i in [100, 200, 300]:
 ### Example: executing many homogeneous queries
 
 ```py
-conn.exec_batch("INSERT ...", [
-  (20, "Alice")
-  (21, "Bob")
-  ...
+conn.exec_batch("INSERT INTO users (age, name) VALUES ($1, $2)", [
+    (20, "Alice"),
+    (21, "Bob"),
+    (22, "Charlie"),
 ])
 ```
 
@@ -97,13 +97,13 @@ with conn.tx() as tx:
 
     # Interleave execution
     while True:
-        rows1 = portal1.execute_collect(conn, 100)
-        rows2 = portal2.execute_collect(conn, 100)
+        rows1 = portal1.exec_collect(100)
+        rows2 = portal2.exec_collect(100)
         process(rows1, rows2)
         if portal1.is_complete() and portal2.is_complete():
             break
 
     # Cleanup
-    portal1.close(conn)
-    portal2.close(conn)
+    portal1.close()
+    portal2.close()
 ```

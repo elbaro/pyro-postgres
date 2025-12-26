@@ -22,14 +22,17 @@ pub struct SyncNamedPortal {
     name: String,
     /// Whether all rows have been fetched
     complete: bool,
+    /// Reference to the connection
+    conn: Py<SyncConn>,
 }
 
 impl SyncNamedPortal {
     /// Create a new named portal wrapper.
-    pub fn new(name: String) -> Self {
+    pub fn new(name: String, conn: Py<SyncConn>) -> Self {
         Self {
             name,
             complete: false,
+            conn,
         }
     }
 }
@@ -42,14 +45,14 @@ impl SyncNamedPortal {
     /// Use max_rows=0 to fetch all remaining rows at once.
     ///
     /// After this call, check `is_complete()` to see if more rows are available.
-    #[pyo3(signature = (conn, max_rows, *, as_dict=false))]
-    fn execute_collect(
+    #[pyo3(signature = (max_rows, *, as_dict=false))]
+    fn exec_collect(
         &mut self,
         py: Python<'_>,
-        conn: &SyncConn,
         max_rows: u32,
         as_dict: bool,
     ) -> PyroResult<Py<PyList>> {
+        let conn = self.conn.bind(py).borrow();
         let mut guard = conn.inner.lock();
         let inner = guard
             .as_mut()
@@ -70,7 +73,7 @@ impl SyncNamedPortal {
 
     /// Check if all rows have been fetched from this portal.
     ///
-    /// Returns True if the last `execute_collect()` call fetched all remaining rows.
+    /// Returns True if the last `exec_collect()` call fetched all remaining rows.
     fn is_complete(&self) -> bool {
         self.complete
     }
@@ -80,7 +83,8 @@ impl SyncNamedPortal {
     /// After closing, the portal cannot be used for further fetching.
     /// It's good practice to close portals when done, though they will
     /// also be closed when the transaction ends.
-    fn close(&mut self, conn: &SyncConn) -> PyroResult<()> {
+    fn close(&mut self, py: Python<'_>) -> PyroResult<()> {
+        let conn = self.conn.bind(py).borrow();
         let mut guard = conn.inner.lock();
         let inner = guard
             .as_mut()

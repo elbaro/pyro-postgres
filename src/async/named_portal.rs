@@ -23,14 +23,17 @@ pub struct AsyncNamedPortal {
     name: String,
     /// Whether all rows have been fetched
     complete: bool,
+    /// Reference to the connection
+    conn: Py<AsyncConn>,
 }
 
 impl AsyncNamedPortal {
     /// Create a new named portal wrapper.
-    pub fn new(name: String) -> Self {
+    pub fn new(name: String, conn: Py<AsyncConn>) -> Self {
         Self {
             name,
             complete: false,
+            conn,
         }
     }
 }
@@ -44,17 +47,15 @@ impl AsyncNamedPortal {
     /// - has_more: True if more rows are available
     ///
     /// Use max_rows=0 to fetch all remaining rows at once.
-    #[pyo3(signature = (conn, max_rows, *, as_dict=false))]
-    fn execute_collect(
+    #[pyo3(signature = (max_rows, *, as_dict=false))]
+    fn exec_collect(
         &mut self,
         py: Python<'_>,
-        conn: Py<AsyncConn>,
         max_rows: u32,
         as_dict: bool,
     ) -> PyResult<Py<PyroFuture>> {
         let name = self.name.clone();
-        // Access inner through Python::attach pattern
-        let inner = Python::attach(|py| conn.bind(py).borrow().inner.clone());
+        let inner = self.conn.bind(py).borrow().inner.clone();
 
         rust_future_into_py::<_, (Py<PyList>, bool)>(py, async move {
             let mut guard = inner.lock().await;
@@ -86,9 +87,9 @@ impl AsyncNamedPortal {
 
     /// Check if all rows have been fetched from this portal.
     ///
-    /// Returns True if the last `execute_collect()` call fetched all remaining rows.
+    /// Returns True if the last `exec_collect()` call fetched all remaining rows.
     ///
-    /// Note: For async, use the `has_more` return value from `execute_collect()` instead,
+    /// Note: For async, use the `has_more` return value from `exec_collect()` instead,
     /// as this property cannot be updated from async operations.
     fn is_complete(&self) -> bool {
         self.complete
@@ -99,10 +100,9 @@ impl AsyncNamedPortal {
     /// After closing, the portal cannot be used for further fetching.
     /// It's good practice to close portals when done, though they will
     /// also be closed when the transaction ends.
-    fn close(&mut self, py: Python<'_>, conn: Py<AsyncConn>) -> PyResult<Py<PyroFuture>> {
+    fn close(&mut self, py: Python<'_>) -> PyResult<Py<PyroFuture>> {
         let name = self.name.clone();
-        // Access inner through Python::attach pattern
-        let inner = Python::attach(|py| conn.bind(py).borrow().inner.clone());
+        let inner = self.conn.bind(py).borrow().inner.clone();
 
         rust_future_into_py::<_, ()>(py, async move {
             let mut guard = inner.lock().await;

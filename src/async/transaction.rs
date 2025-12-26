@@ -208,14 +208,14 @@ impl AsyncTransaction {
     ///     portal2 = await tx.exec_portal("SELECT * FROM table2")
     ///
     ///     while True:
-    ///         rows1, has_more1 = await portal1.execute_collect(conn, 100)
-    ///         rows2, has_more2 = await portal2.execute_collect(conn, 100)
+    ///         rows1, has_more1 = await portal1.exec_collect(100)
+    ///         rows2, has_more2 = await portal2.exec_collect(100)
     ///         process(rows1, rows2)
     ///         if not has_more1 and not has_more2:
     ///             break
     ///
-    ///     await portal1.close(conn)
-    ///     await portal2.close(conn)
+    ///     await portal1.close()
+    ///     await portal2.close()
     /// ```
     #[pyo3(signature = (query, params=None))]
     fn exec_portal(
@@ -261,7 +261,7 @@ impl AsyncTransaction {
                 .lowlevel_bind(&portal_name, &stmt.wire_name(), params_adapter)
                 .await?;
 
-            Ok(AsyncNamedPortal::new(portal_name))
+            Ok(AsyncNamedPortal::new(portal_name, conn))
         })
     }
 }

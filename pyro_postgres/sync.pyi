@@ -48,26 +48,25 @@ class NamedPortal:
     can be interleaved - you can create multiple portals and fetch from them
     alternately. Named portals must be created within an explicit transaction.
 
-    Use `execute_collect()` to fetch rows, `is_complete()` to check if all
+    Use `exec_collect()` to fetch rows, `is_complete()` to check if all
     rows have been fetched, and `close()` to release resources.
     """
 
     @overload
-    def execute_collect(
-        self, conn: "Conn", max_rows: int, *, as_dict: Literal[False] = False
+    def exec_collect(
+        self, max_rows: int, *, as_dict: Literal[False] = False
     ) -> list[tuple[Any, ...]]: ...
     @overload
-    def execute_collect(
-        self, conn: "Conn", max_rows: int, *, as_dict: Literal[True]
+    def exec_collect(
+        self, max_rows: int, *, as_dict: Literal[True]
     ) -> list[dict[str, Any]]: ...
-    def execute_collect(
-        self, conn: "Conn", max_rows: int, *, as_dict: bool = False
+    def exec_collect(
+        self, max_rows: int, *, as_dict: bool = False
     ) -> list[tuple[Any, ...]] | list[dict[str, Any]]:
         """
         Execute the portal and collect up to `max_rows` rows.
 
         Args:
-            conn: The connection to use for fetching.
             max_rows: Maximum number of rows to fetch. Use 0 to fetch all remaining rows.
             as_dict: If True, return rows as dictionaries. If False (default), return rows as tuples.
 
@@ -81,11 +80,11 @@ class NamedPortal:
         Check if all rows have been fetched from this portal.
 
         Returns:
-            True if the last `execute_collect()` call fetched all remaining rows.
+            True if the last `exec_collect()` call fetched all remaining rows.
         """
         ...
 
-    def close(self, conn: "Conn") -> None:
+    def close(self) -> None:
         """
         Close the portal, releasing server resources.
 
@@ -141,14 +140,14 @@ class Transaction:
                 portal2 = tx.exec_portal("SELECT * FROM table2")
 
                 while True:
-                    rows1 = portal1.execute_collect(conn, 100)
-                    rows2 = portal2.execute_collect(conn, 100)
+                    rows1 = portal1.exec_collect(100)
+                    rows2 = portal2.exec_collect(100)
                     process(rows1, rows2)
                     if portal1.is_complete() and portal2.is_complete():
                         break
 
-                portal1.close(conn)
-                portal2.close(conn)
+                portal1.close()
+                portal2.close()
             ```
         """
         ...
