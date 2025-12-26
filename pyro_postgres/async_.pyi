@@ -140,7 +140,7 @@ class Transaction:
         """Rollback the transaction."""
         ...
 
-    def exec_portal(self, query: str, params: Params = None) -> PyroFuture[NamedPortal]:
+    def exec_portal(self, query: str, params: Params = ()) -> PyroFuture[NamedPortal]:
         """
         Create a named portal for iterative row fetching.
 
@@ -326,14 +326,14 @@ class Conn:
 
     @overload
     def exec(
-        self, stmt: Statement, params: Params = None, *, as_dict: Literal[False] = False
+        self, stmt: Statement, params: Params = (), *, as_dict: Literal[False] = False
     ) -> PyroFuture[list[tuple[Any, ...]]]: ...
     @overload
     def exec(
-        self, stmt: Statement, params: Params = None, *, as_dict: Literal[True]
+        self, stmt: Statement, params: Params = (), *, as_dict: Literal[True]
     ) -> PyroFuture[list[dict[str, Any]]]: ...
     def exec(
-        self, stmt: Statement, params: Params = None, *, as_dict: bool = False
+        self, stmt: Statement, params: Params = (), *, as_dict: bool = False
     ) -> PyroFuture[list[tuple[Any, ...]] | list[dict[str, Any]]]:
         """
         Execute a statement using extended protocol and return all rows.
@@ -350,14 +350,14 @@ class Conn:
 
     @overload
     def exec_first(
-        self, stmt: Statement, params: Params = None, *, as_dict: Literal[False] = False
+        self, stmt: Statement, params: Params = (), *, as_dict: Literal[False] = False
     ) -> PyroFuture[tuple[Any, ...] | None]: ...
     @overload
     def exec_first(
-        self, stmt: Statement, params: Params = None, *, as_dict: Literal[True]
+        self, stmt: Statement, params: Params = (), *, as_dict: Literal[True]
     ) -> PyroFuture[dict[str, Any] | None]: ...
     def exec_first(
-        self, stmt: Statement, params: Params = None, *, as_dict: bool = False
+        self, stmt: Statement, params: Params = (), *, as_dict: bool = False
     ) -> PyroFuture[tuple[Any, ...] | dict[str, Any] | None]:
         """
         Execute a statement using extended protocol and return the first row.
@@ -372,7 +372,7 @@ class Conn:
         """
         ...
 
-    def exec_drop(self, stmt: Statement, params: Params = None) -> PyroFuture[int]:
+    def exec_drop(self, stmt: Statement, params: Params = ()) -> PyroFuture[int]:
         """
         Execute a statement using extended protocol and discard the results.
 
