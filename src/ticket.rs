@@ -6,7 +6,7 @@ use zero_postgres::Ticket;
 /// Python wrapper for pipeline Ticket.
 ///
 /// SAFETY: We transmute the Ticket lifetime to 'static because the Pipeline
-/// stores Py<Statement> objects that keep the PreparedStatements alive.
+/// stores Py<PreparedStatement> objects that keep the PreparedStatements alive.
 #[pyclass(module = "pyro_postgres", name = "Ticket", frozen)]
 #[derive(Clone, Copy)]
 pub struct PyTicket {

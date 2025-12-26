@@ -92,12 +92,11 @@ class TestAsyncTransactionExplicit:
         conn = await Conn.new(get_test_db_url())
         await setup_test_table_async(conn)
 
-        txn = conn.tx()
-        async with txn:
+        async with conn.tx() as tx:
             await conn.query_drop(
                 "INSERT INTO test_table (name, age) VALUES ('Alice', 30)"
             )
-            await txn.commit()
+            await tx.commit()
 
         result = await conn.query_first("SELECT name FROM test_table")
         assert result
@@ -112,12 +111,11 @@ class TestAsyncTransactionExplicit:
         conn = await Conn.new(get_test_db_url())
         await setup_test_table_async(conn)
 
-        txn = conn.tx()
-        async with txn:
+        async with conn.tx() as tx:
             await conn.query_drop(
                 "INSERT INTO test_table (name, age) VALUES ('Alice', 30)"
             )
-            await txn.rollback()
+            await tx.rollback()
 
         result = await conn.query_first("SELECT name FROM test_table")
         assert result is None
@@ -152,11 +150,10 @@ class TestAsyncTransactionExplicit:
         """Test commit after commit raises error."""
         conn = await Conn.new(get_test_db_url())
 
-        txn = conn.tx()
-        async with txn:
-            await txn.commit()
+        async with conn.tx() as tx:
+            await tx.commit()
             with pytest.raises(TransactionClosedError):
-                await txn.commit()
+                await tx.commit()
 
         await conn.close()
 
@@ -165,11 +162,10 @@ class TestAsyncTransactionExplicit:
         """Test rollback after rollback raises error."""
         conn = await Conn.new(get_test_db_url())
 
-        txn = conn.tx()
-        async with txn:
-            await txn.rollback()
+        async with conn.tx() as tx:
+            await tx.rollback()
             with pytest.raises(TransactionClosedError):
-                await txn.rollback()
+                await tx.rollback()
 
         await conn.close()
 

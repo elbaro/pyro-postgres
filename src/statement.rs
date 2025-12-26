@@ -1,34 +1,34 @@
 use pyo3::prelude::*;
-use zero_postgres::state::extended::PreparedStatement;
+use zero_postgres::state::extended::PreparedStatement as ZeroPreparedStatement;
 
 /// Python wrapper for a prepared statement.
 ///
 /// Created via `conn.prepare()` and used with `pipeline.exec()`:
 ///
 /// ```python
-/// stmt = conn.prepare("INSERT INTO users (name) VALUES ($1)")
+/// prepared = conn.prepare("INSERT INTO users (name) VALUES ($1)")
 /// with conn.pipeline() as p:
-///     t1 = p.exec(stmt, ("Alice",))
-///     t2 = p.exec(stmt, ("Bob",))
+///     t1 = p.exec(prepared, ("Alice",))
+///     t2 = p.exec(prepared, ("Bob",))
 ///     p.sync()
 ///     p.claim_drop(t1)
 ///     p.claim_drop(t2)
 /// ```
-#[pyclass(module = "pyro_postgres", name = "Statement", frozen)]
+#[pyclass(module = "pyro_postgres", name = "PreparedStatement", frozen)]
 #[derive(Clone)]
-pub struct Statement {
-    pub inner: PreparedStatement,
+pub struct PreparedStatement {
+    pub inner: ZeroPreparedStatement,
 }
 
-impl Statement {
-    pub fn new(inner: PreparedStatement) -> Self {
+impl PreparedStatement {
+    pub fn new(inner: ZeroPreparedStatement) -> Self {
         Self { inner }
     }
 }
 
 #[pymethods]
-impl Statement {
+impl PreparedStatement {
     fn __repr__(&self) -> String {
-        format!("Statement(name='{}')", self.inner.wire_name())
+        format!("PreparedStatement(name='{}')", self.inner.wire_name())
     }
 }

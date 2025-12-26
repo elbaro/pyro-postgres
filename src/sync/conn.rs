@@ -1,27 +1,27 @@
-use std::collections::HashMap;
 use std::sync::atomic::AtomicBool;
 
+use either::Either;
 use parking_lot::Mutex;
 use pyo3::prelude::*;
+use pyo3::pybacked::PyBackedStr;
 use pyo3::types::PyList;
-use zero_postgres::state::extended::PreparedStatement;
 use zero_postgres::sync::Conn;
 
 use crate::error::{Error, PyroResult};
 use crate::isolation_level::IsolationLevel;
 use crate::opts::resolve_opts;
 use crate::params::Params;
-use crate::statement::Statement;
+use crate::statement::PreparedStatement;
 use crate::sync::handler::{DictHandler, DropHandler, TupleHandler};
 use crate::sync::pipeline::SyncPipeline;
 use crate::sync::transaction::SyncTransaction;
+use crate::sync::unnamed_portal::SyncUnnamedPortal;
 use crate::zero_params_adapter::ParamsAdapter;
 
 #[pyclass(module = "pyro_postgres.sync", name = "Conn")]
 pub struct SyncConn {
     pub inner: Mutex<Option<Conn>>,
     pub in_transaction: AtomicBool,
-    pub stmt_cache: Mutex<HashMap<String, PreparedStatement>>,
 }
 
 #[pymethods]
@@ -35,7 +35,6 @@ impl SyncConn {
         Ok(Self {
             inner: Mutex::new(Some(conn)),
             in_transaction: AtomicBool::new(false),
-            stmt_cache: Mutex::new(HashMap::new()),
         })
     }
 
@@ -141,136 +140,248 @@ impl SyncConn {
 
     // ─── Extended Query Protocol (Binary) ─────────────────────────────────────
 
-    #[pyo3(signature = (query, params=Params::default(), *, as_dict=false))]
+    #[pyo3(signature = (stmt, params=Params::default(), *, as_dict=false))]
     fn exec(
         &self,
         py: Python<'_>,
-        query: String,
+        stmt: Either<PyBackedStr, Py<PreparedStatement>>,
         params: Params,
         as_dict: bool,
     ) -> PyroResult<Py<PyList>> {
         let mut guard = self.inner.lock();
         let conn = guard.as_mut().ok_or(Error::ConnectionClosedError)?;
-
-        let mut cache = self.stmt_cache.lock();
-        if !cache.contains_key(&query) {
-            let stmt = conn.prepare(&query)?;
-            cache.insert(query.clone(), stmt);
-        }
-        #[expect(clippy::unwrap_used)]
-        let stmt = cache.get(&query).unwrap();
-
         let params_adapter = ParamsAdapter::new(&params);
-        if as_dict {
-            let mut handler = DictHandler::new(py);
-            conn.exec(stmt, params_adapter, &mut handler)?;
-            Ok(handler.into_rows())
-        } else {
-            let mut handler = TupleHandler::new(py);
-            conn.exec(stmt, params_adapter, &mut handler)?;
-            Ok(handler.into_rows())
+
+        match stmt {
+            Either::Left(query) => {
+                let prepared = conn.prepare(&query)?;
+                if as_dict {
+                    let mut handler = DictHandler::new(py);
+                    conn.exec(&prepared, params_adapter, &mut handler)?;
+                    Ok(handler.into_rows())
+                } else {
+                    let mut handler = TupleHandler::new(py);
+                    conn.exec(&prepared, params_adapter, &mut handler)?;
+                    Ok(handler.into_rows())
+                }
+            }
+            Either::Right(prepared) => {
+                let stmt_ref = &prepared.borrow(py).inner;
+                if as_dict {
+                    let mut handler = DictHandler::new(py);
+                    conn.exec(stmt_ref, params_adapter, &mut handler)?;
+                    Ok(handler.into_rows())
+                } else {
+                    let mut handler = TupleHandler::new(py);
+                    conn.exec(stmt_ref, params_adapter, &mut handler)?;
+                    Ok(handler.into_rows())
+                }
+            }
         }
     }
 
-    #[pyo3(signature = (query, params=Params::default(), *, as_dict=false))]
+    #[pyo3(signature = (stmt, params=Params::default(), *, as_dict=false))]
     fn exec_first(
         &self,
         py: Python<'_>,
-        query: &str,
+        stmt: Either<PyBackedStr, Py<PreparedStatement>>,
         params: Params,
         as_dict: bool,
     ) -> PyroResult<Option<Py<PyAny>>> {
         let mut guard = self.inner.lock();
         let conn = guard.as_mut().ok_or(Error::ConnectionClosedError)?;
-
-        let mut cache = self.stmt_cache.lock();
-        if !cache.contains_key(query) {
-            let stmt = conn.prepare(&query)?;
-            cache.insert(query.to_string(), stmt);
-        }
-        #[expect(clippy::unwrap_used)]
-        let stmt = cache.get(query).unwrap();
-
         let params_adapter = ParamsAdapter::new(&params);
-        if as_dict {
-            let mut handler = DictHandler::new(py);
-            conn.exec(stmt, params_adapter, &mut handler)?;
-            let rows = handler.into_rows();
-            Ok(if rows.bind(py).len() > 0 {
-                Some(rows.bind(py).get_item(0)?.unbind())
-            } else {
-                None
-            })
-        } else {
-            let mut handler = TupleHandler::new(py);
-            conn.exec(stmt, params_adapter, &mut handler)?;
-            let rows = handler.into_rows();
-            Ok(if rows.bind(py).len() > 0 {
-                Some(rows.bind(py).get_item(0)?.unbind())
-            } else {
-                None
-            })
+
+        match stmt {
+            Either::Left(query) => {
+                let prepared = conn.prepare(&query)?;
+                if as_dict {
+                    let mut handler = DictHandler::new(py);
+                    conn.exec(&prepared, params_adapter, &mut handler)?;
+                    let rows = handler.into_rows();
+                    Ok(if rows.bind(py).len() > 0 {
+                        Some(rows.bind(py).get_item(0)?.unbind())
+                    } else {
+                        None
+                    })
+                } else {
+                    let mut handler = TupleHandler::new(py);
+                    conn.exec(&prepared, params_adapter, &mut handler)?;
+                    let rows = handler.into_rows();
+                    Ok(if rows.bind(py).len() > 0 {
+                        Some(rows.bind(py).get_item(0)?.unbind())
+                    } else {
+                        None
+                    })
+                }
+            }
+            Either::Right(prepared) => {
+                let stmt_ref = &prepared.borrow(py).inner;
+                if as_dict {
+                    let mut handler = DictHandler::new(py);
+                    conn.exec(stmt_ref, params_adapter, &mut handler)?;
+                    let rows = handler.into_rows();
+                    Ok(if rows.bind(py).len() > 0 {
+                        Some(rows.bind(py).get_item(0)?.unbind())
+                    } else {
+                        None
+                    })
+                } else {
+                    let mut handler = TupleHandler::new(py);
+                    conn.exec(stmt_ref, params_adapter, &mut handler)?;
+                    let rows = handler.into_rows();
+                    Ok(if rows.bind(py).len() > 0 {
+                        Some(rows.bind(py).get_item(0)?.unbind())
+                    } else {
+                        None
+                    })
+                }
+            }
         }
     }
 
-    #[pyo3(signature = (query, params=Params::default()))]
-    fn exec_drop(&self, query: String, params: Params) -> PyroResult<u64> {
+    #[pyo3(signature = (stmt, params=Params::default()))]
+    fn exec_drop(
+        &self,
+        py: Python<'_>,
+        stmt: Either<PyBackedStr, Py<PreparedStatement>>,
+        params: Params,
+    ) -> PyroResult<u64> {
         let mut guard = self.inner.lock();
         let conn = guard.as_mut().ok_or(Error::ConnectionClosedError)?;
-
-        let mut cache = self.stmt_cache.lock();
-        if !cache.contains_key(&query) {
-            let stmt = conn.prepare(&query)?;
-            cache.insert(query.clone(), stmt);
-        }
-        #[expect(clippy::unwrap_used)]
-        let stmt = cache.get(&query).unwrap();
-
-        let mut handler = DropHandler::default();
         let params_adapter = ParamsAdapter::new(&params);
-        conn.exec(stmt, params_adapter, &mut handler)?;
 
-        Ok(handler.rows_affected.unwrap_or(0))
+        match stmt {
+            Either::Left(query) => {
+                let prepared = conn.prepare(&query)?;
+                let mut handler = DropHandler::default();
+                conn.exec(&prepared, params_adapter, &mut handler)?;
+                Ok(handler.rows_affected.unwrap_or(0))
+            }
+            Either::Right(prepared) => {
+                let stmt_ref = &prepared.borrow(py).inner;
+                let mut handler = DropHandler::default();
+                conn.exec(stmt_ref, params_adapter, &mut handler)?;
+                Ok(handler.rows_affected.unwrap_or(0))
+            }
+        }
     }
 
     /// Execute a statement with multiple parameter sets in a batch.
     ///
     /// Uses pipeline mode internally for optimal performance.
-    #[pyo3(signature = (query, params_list))]
-    fn exec_batch(&self, query: &str, params_list: Vec<Params>) -> PyroResult<()> {
+    #[pyo3(signature = (stmt, params_list))]
+    fn exec_batch(
+        &self,
+        py: Python<'_>,
+        stmt: Either<PyBackedStr, Py<PreparedStatement>>,
+        params_list: Vec<Params>,
+    ) -> PyroResult<()> {
         let mut guard = self.inner.lock();
         let conn = guard.as_mut().ok_or(Error::ConnectionClosedError)?;
-
         let adapters: Vec<_> = params_list.iter().map(ParamsAdapter::new).collect();
-        conn.exec_batch(query, &adapters)?;
+
+        match stmt {
+            Either::Left(query) => {
+                conn.exec_batch(&*query, &adapters)?;
+            }
+            Either::Right(prepared) => {
+                let stmt_ref = &prepared.borrow(py).inner;
+                conn.exec_batch(stmt_ref, &adapters)?;
+            }
+        }
         Ok(())
+    }
+
+    /// Execute a statement and process rows iteratively via a callback.
+    ///
+    /// The callback receives an `UnnamedPortal` that can fetch rows in batches.
+    /// Useful for processing large result sets that don't fit in memory.
+    ///
+    /// ```python
+    /// def process(portal):
+    ///     while True:
+    ///         rows, has_more = portal.fetch(1000)
+    ///         for row in rows:
+    ///             process_row(row)
+    ///         if not has_more:
+    ///             break
+    ///     return total_count
+    ///
+    /// result = conn.exec_iter("SELECT * FROM large_table", (), process)
+    /// ```
+    #[pyo3(signature = (stmt, params, callback))]
+    fn exec_iter(
+        &self,
+        py: Python<'_>,
+        stmt: Either<PyBackedStr, Py<PreparedStatement>>,
+        params: Params,
+        callback: Py<PyAny>,
+    ) -> PyroResult<Py<PyAny>> {
+        let mut guard = self.inner.lock();
+        let conn = guard.as_mut().ok_or(Error::ConnectionClosedError)?;
+        let params_adapter = ParamsAdapter::new(&params);
+
+        match stmt {
+            Either::Left(query) => {
+                let prepared = conn.prepare(&query)?;
+                Ok(conn.exec_iter(&prepared, params_adapter, |portal| {
+                    let py_portal = unsafe { SyncUnnamedPortal::new(portal) };
+                    let py_portal_obj = Py::new(py, py_portal)
+                        .map_err(|e| zero_postgres::Error::Protocol(e.to_string()))?;
+                    let result = callback
+                        .call1(py, (py_portal_obj,))
+                        .map_err(|e| zero_postgres::Error::Protocol(e.to_string()))?;
+                    Ok(result)
+                })?)
+            }
+            Either::Right(prepared) => {
+                let stmt_ref = &prepared.borrow(py).inner;
+                Ok(conn.exec_iter(stmt_ref, params_adapter, |portal| {
+                    let py_portal = unsafe { SyncUnnamedPortal::new(portal) };
+                    let py_portal_obj = Py::new(py, py_portal)
+                        .map_err(|e| zero_postgres::Error::Protocol(e.to_string()))?;
+                    let result = callback
+                        .call1(py, (py_portal_obj,))
+                        .map_err(|e| zero_postgres::Error::Protocol(e.to_string()))?;
+                    Ok(result)
+                })?)
+            }
+        }
     }
 
     /// Prepare a statement for later execution.
     ///
-    /// Returns a Statement that can be used with `pipeline.exec()`:
+    /// Returns a PreparedStatement that can be used with exec methods:
     ///
     /// ```python
-    /// stmt = conn.prepare("INSERT INTO users (name) VALUES ($1)")
-    /// with conn.pipeline() as p:
-    ///     t1 = p.exec(stmt, ("Alice",))
-    ///     t2 = p.exec(stmt, ("Bob",))
-    ///     p.sync()
-    ///     p.claim_drop(t1)
-    ///     p.claim_drop(t2)
+    /// stmt = conn.prepare("SELECT * FROM users WHERE id = $1")
+    /// row1 = conn.exec_first(stmt, (1,))
+    /// row2 = conn.exec_first(stmt, (2,))
     /// ```
-    fn prepare(&self, query: &str) -> PyroResult<Statement> {
+    fn prepare(&self, query: &str) -> PyroResult<PreparedStatement> {
+        let mut guard = self.inner.lock();
+        let conn = guard.as_mut().ok_or(Error::ConnectionClosedError)?;
+        let stmt = conn.prepare(query)?;
+        Ok(PreparedStatement::new(stmt))
+    }
+
+    /// Prepare multiple statements in a single round trip.
+    ///
+    /// ```python
+    /// stmts = conn.prepare_batch([
+    ///     "SELECT * FROM users WHERE id = $1",
+    ///     "INSERT INTO logs (msg) VALUES ($1)",
+    /// ])
+    /// ```
+    fn prepare_batch(&self, py: Python<'_>, sqls: Vec<PyBackedStr>) -> PyroResult<Py<PyList>> {
         let mut guard = self.inner.lock();
         let conn = guard.as_mut().ok_or(Error::ConnectionClosedError)?;
 
-        let mut cache = self.stmt_cache.lock();
-        if let Some(stmt) = cache.get(query) {
-            return Ok(Statement::new(stmt.clone()));
-        }
-
-        let stmt = conn.prepare(query)?;
-        cache.insert(query.to_string(), stmt.clone());
-        Ok(Statement::new(stmt))
+        let sql_refs: Vec<&str> = sqls.iter().map(|s| &**s).collect();
+        let statements = conn.prepare_batch(&sql_refs)?;
+        let list = PyList::new(py, statements.into_iter().map(PreparedStatement::new))?;
+        Ok(list.unbind())
     }
 
     pub fn close(&self) {

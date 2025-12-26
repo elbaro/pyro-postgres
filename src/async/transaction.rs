@@ -1,11 +1,17 @@
-use std::sync::atomic::Ordering;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use pyo3::prelude::*;
+use pyo3::pybacked::PyBackedStr;
 
 use crate::r#async::conn::AsyncConn;
 use crate::r#async::handler::DropHandler;
+use crate::r#async::named_portal::AsyncNamedPortal;
 use crate::error::Error;
+use crate::params::Params;
 use crate::util::{PyroFuture, rust_future_into_py};
+use crate::zero_params_adapter::ParamsAdapter;
+
+static NAME_COUNTER: AtomicU64 = AtomicU64::new(0);
 
 #[pyclass(module = "pyro_postgres.async_", name = "Transaction")]
 pub struct AsyncTransaction {
@@ -34,12 +40,18 @@ impl AsyncTransaction {
 
 #[pymethods]
 impl AsyncTransaction {
-    fn __aenter__<'py>(mut slf: PyRefMut<'py, Self>, py: Python<'py>) -> PyResult<Py<PyroFuture>> {
-        let conn = slf.conn.clone_ref(py);
-        let isolation_level = slf.isolation_level.clone();
-        let readonly = slf.readonly;
+    fn __aenter__(slf: Py<Self>, py: Python<'_>) -> PyResult<Py<PyroFuture>> {
+        let tx = slf.clone_ref(py);
 
-        slf.started = true;
+        let (conn, isolation_level, readonly) = {
+            let mut borrowed = slf.borrow_mut(py);
+            borrowed.started = true;
+            (
+                borrowed.conn.clone_ref(py),
+                borrowed.isolation_level.clone(),
+                borrowed.readonly,
+            )
+        };
 
         rust_future_into_py(py, async move {
             let conn_inner = Python::attach(|py| {
@@ -72,7 +84,7 @@ impl AsyncTransaction {
                 conn_ref.in_transaction.store(true, Ordering::SeqCst);
             });
 
-            Ok(conn)
+            Ok(tx)
         })
     }
 
@@ -178,6 +190,78 @@ impl AsyncTransaction {
             });
 
             Ok(())
+        })
+    }
+
+    /// Create a named portal for iterative row fetching.
+    ///
+    /// Named portals allow interleaving multiple row streams. Unlike unnamed portals
+    /// (used in exec_iter), named portals can be executed multiple times and can
+    /// coexist with other portals.
+    ///
+    /// Named portals must be created within an explicit transaction because SYNC
+    /// messages (which occur at transaction boundaries) close all unnamed portals.
+    ///
+    /// ```python
+    /// async with conn.tx() as tx:
+    ///     portal1 = await tx.exec_portal("SELECT * FROM table1")
+    ///     portal2 = await tx.exec_portal("SELECT * FROM table2")
+    ///
+    ///     while True:
+    ///         rows1, has_more1 = await portal1.execute_collect(conn, 100)
+    ///         rows2, has_more2 = await portal2.execute_collect(conn, 100)
+    ///         process(rows1, rows2)
+    ///         if not has_more1 and not has_more2:
+    ///             break
+    ///
+    ///     await portal1.close(conn)
+    ///     await portal2.close(conn)
+    /// ```
+    #[pyo3(signature = (query, params=None))]
+    fn exec_portal(
+        &self,
+        py: Python<'_>,
+        query: PyBackedStr,
+        params: Option<Py<PyAny>>,
+    ) -> PyResult<Py<PyroFuture>> {
+        if !self.started {
+            return Err(Error::IncorrectApiUsageError("Transaction not started").into());
+        }
+        if self.finished {
+            return Err(Error::TransactionClosedError.into());
+        }
+
+        let params_obj: Params = params
+            .map(|p| p.extract(py))
+            .transpose()?
+            .unwrap_or_default();
+        let query_string = query.to_string();
+
+        let conn = self.conn.clone_ref(py);
+        let portal_id = NAME_COUNTER.fetch_add(1, Ordering::Relaxed);
+
+        rust_future_into_py(py, async move {
+            let conn_inner = Python::attach(|py| {
+                let conn_ref = conn.bind(py).borrow();
+                conn_ref.inner.clone()
+            });
+
+            let mut guard = conn_inner.lock().await;
+            let inner = guard.as_mut().ok_or(Error::ConnectionClosedError)?;
+
+            // Prepare the statement
+            let stmt = inner.prepare(&query_string).await?;
+
+            // Generate unique portal name
+            let portal_name = format!("pyro_p_{portal_id}");
+
+            // Bind the statement to the named portal
+            let params_adapter = ParamsAdapter::new(&params_obj);
+            inner
+                .lowlevel_bind(&portal_name, &stmt.wire_name(), params_adapter)
+                .await?;
+
+            Ok(AsyncNamedPortal::new(portal_name))
         })
     }
 }

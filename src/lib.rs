@@ -21,7 +21,7 @@ use crate::{
     r#async::{conn::AsyncConn, pipeline::AsyncPipeline, transaction::AsyncTransaction},
     isolation_level::IsolationLevel,
     opts::Opts,
-    statement::Statement,
+    statement::PreparedStatement,
     sync::{conn::SyncConn, pipeline::SyncPipeline, transaction::SyncTransaction},
     ticket::PyTicket,
     util::PyroFuture,
@@ -66,7 +66,7 @@ mod pyro_postgres {
     use super::PyJsonb;
 
     #[pymodule_export]
-    use super::Statement;
+    use super::PreparedStatement;
 
     #[pymodule_export]
     use super::PyTicket;
@@ -106,10 +106,16 @@ mod pyro_postgres {
         use crate::r#async::conn::AsyncConn;
 
         #[pymodule_export]
+        use crate::r#async::named_portal::AsyncNamedPortal;
+
+        #[pymodule_export]
         use crate::r#async::pipeline::AsyncPipeline;
 
         #[pymodule_export]
         use crate::r#async::transaction::AsyncTransaction;
+
+        #[pymodule_export]
+        use crate::r#async::unnamed_portal::AsyncUnnamedPortal;
     }
 
     #[pymodule]
@@ -118,10 +124,16 @@ mod pyro_postgres {
         use crate::sync::conn::SyncConn;
 
         #[pymodule_export]
+        use crate::sync::named_portal::SyncNamedPortal;
+
+        #[pymodule_export]
         use crate::sync::pipeline::SyncPipeline;
 
         #[pymodule_export]
         use crate::sync::transaction::SyncTransaction;
+
+        #[pymodule_export]
+        use crate::sync::unnamed_portal::SyncUnnamedPortal;
     }
 
     #[pymodule_init]
@@ -148,7 +160,7 @@ mod pyro_postgres {
             m.add("SyncTransaction", py.get_type::<SyncTransaction>())?;
             m.add("Json", py.get_type::<PyJson>())?;
             m.add("Jsonb", py.get_type::<PyJsonb>())?;
-            m.add("Statement", py.get_type::<Statement>())?;
+            m.add("Statement", py.get_type::<PreparedStatement>())?;
             PyResult::Ok(())
         })?;
 

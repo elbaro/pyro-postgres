@@ -12,7 +12,7 @@ use crate::r#async::conn::AsyncConn;
 use crate::r#async::handler::{DictHandler, DropHandler, TupleHandler};
 use crate::error::Error;
 use crate::params::Params;
-use crate::statement::Statement;
+use crate::statement::PreparedStatement;
 use crate::ticket::PyTicket;
 use crate::util::{PyroFuture, rust_future_into_py};
 use crate::zero_params_adapter::ParamsAdapter;
@@ -44,7 +44,7 @@ struct PipelineState {
     pipeline: Pipeline<'static>,
     /// Statements stored here to ensure they outlive their tickets.
     /// The Ticket's `stmt` field references the inner PreparedStatement.
-    statements: Vec<Py<Statement>>,
+    statements: Vec<Py<PreparedStatement>>,
 }
 
 impl AsyncPipeline {
@@ -135,13 +135,12 @@ impl AsyncPipeline {
 
     /// Queue a statement execution.
     ///
-    /// Accepts either a SQL query string or a prepared Statement.
+    /// Accepts either a SQL query string or a prepared PreparedStatement.
     /// Returns a Ticket that must be claimed later using claim_one, claim_collect, or claim_drop.
     #[pyo3(signature = (query, params=Params::default()))]
     fn exec(
         &self,
-        py: Python<'_>,
-        query: Either<PyBackedStr, Py<Statement>>,
+        query: Either<PyBackedStr, Py<PreparedStatement>>,
         params: Params,
     ) -> PyResult<PyTicket> {
         let mut state_guard = self.state.lock();
@@ -164,21 +163,15 @@ impl AsyncPipeline {
                 state.statements.push(stmt_py);
 
                 // Get a reference to the stored statement's inner PreparedStatement
-                // SAFETY: We just pushed the statement, so it's at the last index.
-                // The reference is valid as long as PipelineState exists.
-                let stmt_ref = {
-                    let stmt = state.statements.last().expect("just pushed");
-                    let inner_ptr = &stmt.borrow(py).inner as *const _;
-                    // SAFETY: The Py<Statement> in state.statements keeps the Statement alive,
-                    // and we hold the state_guard lock, so the reference is valid.
-                    unsafe { &*inner_ptr }
-                };
+                // SAFETY: PreparedStatement is frozen, so .get() is safe without the GIL.
+                // The Py<PreparedStatement> in state.statements keeps it alive.
+                let stmt_ref = &state.statements.last().expect("just pushed").get().inner;
 
                 let ticket = state
                     .pipeline
                     .exec(stmt_ref, params_adapter)
                     .map_err(Error::from)?;
-                // SAFETY: The stmt reference points to a Statement stored in
+                // SAFETY: The stmt reference points to a PreparedStatement stored in
                 // state.statements, which lives until pipeline cleanup.
                 Ok(unsafe { PyTicket::new(ticket) })
             }

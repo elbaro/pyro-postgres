@@ -7,7 +7,7 @@ use zero_postgres::sync::{Conn, Pipeline};
 
 use crate::error::{Error, PyroResult};
 use crate::params::Params;
-use crate::statement::Statement;
+use crate::statement::PreparedStatement;
 use crate::sync::conn::SyncConn;
 use crate::sync::handler::{DictHandler, DropHandler, TupleHandler};
 use crate::ticket::PyTicket;
@@ -34,7 +34,7 @@ pub struct SyncPipeline {
     guard: Option<MutexGuard<'static, Option<Conn>>>,
     pipeline: Option<Pipeline<'static>>,
     /// Statements stored here to ensure they outlive their tickets.
-    statements: Vec<Py<Statement>>,
+    statements: Vec<Py<PreparedStatement>>,
     entered: bool,
 }
 
@@ -113,13 +113,12 @@ impl SyncPipeline {
 
     /// Queue a statement execution.
     ///
-    /// Accepts either a SQL query string or a prepared Statement.
+    /// Accepts either a SQL query string or a prepared PreparedStatement.
     /// Returns a Ticket that must be claimed later using claim_one, claim_collect, or claim_drop.
     #[pyo3(signature = (query, params=Params::default()))]
     fn exec(
         &mut self,
-        py: Python<'_>,
-        query: Either<PyBackedStr, Py<Statement>>,
+        query: Either<PyBackedStr, Py<PreparedStatement>>,
         params: Params,
     ) -> PyroResult<PyTicket> {
         let pipeline = self.pipeline.as_mut().ok_or(Error::IncorrectApiUsageError(
@@ -136,16 +135,12 @@ impl SyncPipeline {
             Either::Right(stmt_py) => {
                 // Store the statement to keep it alive
                 self.statements.push(stmt_py);
-                // Get a pointer to the inner PreparedStatement
-                let inner_ptr = {
-                    let stmt_ref = self.statements.last().expect("just pushed").borrow(py);
-                    &stmt_ref.inner as *const _
-                };
-                // SAFETY: The Py<Statement> in self.statements keeps the Statement alive,
-                // and the pipeline holds &mut self, so the reference is valid.
-                let stmt_ref = unsafe { &*inner_ptr };
+                // Get a reference to the stored statement's inner PreparedStatement
+                // SAFETY: PreparedStatement is frozen, so .get() is safe without the GIL.
+                // The Py<PreparedStatement> in self.statements keeps it alive.
+                let stmt_ref = &self.statements.last().expect("just pushed").get().inner;
                 let ticket = pipeline.exec(stmt_ref, params_adapter)?;
-                // SAFETY: The stmt reference points to a Statement stored in
+                // SAFETY: The stmt reference points to a PreparedStatement stored in
                 // self.statements, which lives until pipeline cleanup.
                 Ok(unsafe { PyTicket::new(ticket) })
             }

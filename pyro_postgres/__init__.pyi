@@ -177,3 +177,24 @@ class IsolationLevel:
     def name(self) -> str:
         """Return the isolation level as a string."""
         ...
+
+class PreparedStatement:
+    """
+    A prepared statement that can be reused for efficient query execution.
+
+    Created via `conn.prepare()` and used with `pipeline.exec()`:
+
+    ```python
+    prepared = conn.prepare("INSERT INTO users (name) VALUES ($1)")
+    with conn.pipeline() as p:
+        t1 = p.exec(prepared, ("Alice",))
+        t2 = p.exec(prepared, ("Bob",))
+        p.sync()
+        p.claim_drop(t1)
+        p.claim_drop(t2)
+    ```
+    """
+
+    ...
+
+Statement = str | PreparedStatement
