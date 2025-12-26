@@ -870,7 +870,7 @@ dependencies = [
 
 [[package]]
 name = "pyro_postgres"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "criterion",
  "either",
@@ -1505,6 +1505,8 @@ dependencies = [
 [[package]]
 name = "zero-postgres"
 version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "15f1c0c28c1cf4d0d0ec118d85e7c60624835adb2038d3563d63e8926003cb04"
 dependencies = [
  "base64",
  "crossbeam-queue",

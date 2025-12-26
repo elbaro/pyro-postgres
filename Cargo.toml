@@ -1,6 +1,6 @@
 [package]
 name = "pyro_postgres"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 
 [lib]
@@ -19,7 +19,7 @@ pyo3-async-runtimes = { version = "0.27.0", features = ["tokio-runtime"] }
 pyo3-log = "0.13.2"
 log = { version = "0.4", features = ["release_max_level_info"] }
 tokio = { version = "1", features = ["rt", "net", "io-util", "sync"] }
-zero-postgres = { path = "../zero-postgres", features = ["tokio", "sync", "lowlevel"] }
+zero-postgres = { version = "0.3.0", features = ["tokio", "sync", "lowlevel"] }
 time = "0.3"
 parking_lot = "0.12"
 thiserror = "2"
