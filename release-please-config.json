@@ -2,18 +2,42 @@
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
   "release-type": "rust",
   "pull-request-title-pattern": "release: v${version}",
-  "pull-request-header": "",
+  "pull-request-header": " ",
   "pull-request-footer": " ",
   "label": "release",
   "changelog-sections": [
-    { "type": "feat", "section": "Features" },
-    { "type": "fix", "section": "Bug Fixes" },
-    { "type": "perf", "section": "Performance" },
-    { "type": "docs", "section": "Documentation" },
-    { "type": "tidy", "hidden": true },
-    { "type": "infra", "hidden": true },
-    { "type": "revert", "hidden": true },
-    { "type": "release", "hidden": true }
+    {
+      "type": "feat",
+      "section": "Features"
+    },
+    {
+      "type": "fix",
+      "section": "Bug Fixes"
+    },
+    {
+      "type": "perf",
+      "section": "Performance"
+    },
+    {
+      "type": "docs",
+      "section": "Documentation"
+    },
+    {
+      "type": "tidy",
+      "hidden": true
+    },
+    {
+      "type": "infra",
+      "hidden": true
+    },
+    {
+      "type": "revert",
+      "hidden": true
+    },
+    {
+      "type": "release",
+      "hidden": true
+    }
   ],
   "packages": {
     ".": {}
