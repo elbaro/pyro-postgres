@@ -1,8 +1,5 @@
 [workspace]
 pr_name = "release: v{{ version }}"
 pr_labels = ["release"]
-
-[[package]]
-name = "pyro_postgres"
-release = true        # create git tag and GitHub release
-publish = false       # don't publish to crates.io
+release = true                      # create git tag and GitHub release
+publish = false                     # don't publish to crates.io
