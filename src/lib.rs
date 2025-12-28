@@ -140,7 +140,7 @@ mod pyro_postgres {
             log::debug!("Running in Release mode.");
         }
 
-        super::init(None, None);
+        super::init();
 
         // Alias
         Python::attach(|py| {
