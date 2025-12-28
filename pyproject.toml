@@ -11,5 +11,8 @@ dependencies = ["typing_extensions"]
 [tool.maturin]
 features = ["pyo3/extension-module"]
 
+[dependency-groups]
+dev = ["maturin>=1,<2"]
+
 [tool.uv]
-cache-keys = [{ file = "pyro_postgres/*.pyi" }, { file = "pyro_postgres/*.py" }, { glob = "src/**/*.rs" }]
+cache-keys = [{ file = "pyproject.toml" }, { file = "pyro_postgres/*.pyi" }, { file = "pyro_postgres/*.py" }, { file = "src/**/*.rs" }]
