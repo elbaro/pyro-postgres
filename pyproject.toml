@@ -12,7 +12,10 @@ dependencies = ["typing_extensions"]
 features = ["pyo3/extension-module"]
 
 [dependency-groups]
-dev = ["maturin>=1,<2", "pytest>=8"]
+dev = ["maturin>=1,<2", "pytest>=8", "pytest-asyncio>=0.24"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
 
 [tool.uv]
 cache-keys = [{ file = "pyproject.toml" }, { file = "pyro_postgres/*.pyi" }, { file = "pyro_postgres/*.py" }, { file = "src/**/*.rs" }]
