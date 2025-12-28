@@ -28,10 +28,10 @@ from pyro_postgres.sync import Conn
 from pyro_postgres import Opts
 
 # url
-conn1 = Conn("pg://test:1234@localhost:5432/test_db?tls=require")
+conn1 = Conn("pg://test:1234@localhost:5432/test_db?sslmode=require")
 
 # url + Opts
-conn2 = Conn(Opts("pg://test@localhost").tcp_nodelay(True).tls("require"))
+conn2 = Conn(Opts("pg://test@localhost").tcp_nodelay(True).ssl_mode("require"))
 
 # Opts
 conn3 = Conn(
@@ -60,9 +60,9 @@ conn = Conn("pg://localhost/test?socket=/tmp/pg/.s.PGSQL.5432")
 
 ## Advanced: Upgrade to Unix Socket
 
-By default, `Opts.prefer_unix_socket` is `True`.
+By default, `Opts.upgrade_to_unix_socket` is `True`.
 
-If `prefer_unix_socket` is True and the tcp peer IP is local, the library sends `SHOW unix_socket_directories` to get the unix socket path, and then tries to reconnect to `{unix_socket_directories}/.s.PGSQL.{opts.port}`.
+If `upgrade_to_unix_socket` is True and the tcp peer IP is local, the library sends `SHOW unix_socket_directories` to get the unix socket path, and then tries to reconnect to `{unix_socket_directories}/.s.PGSQL.{opts.port}`.
 This upgrade happens transparently in connection time. If succeeds, the constructor returns the new unix socket connection. If fails, returns the original TCP connection.
 
 ```

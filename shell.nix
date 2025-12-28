@@ -32,6 +32,6 @@ pkgs.mkShell {
 
   shellHook = ''
     export PYTHONPATH=.
-    export DATABASE_URL="postgres://test:1234@localhost:5432/test?prefer_unix_socket=false"
+    export DATABASE_URL="postgres://test:1234@localhost:5432/test?upgrade_to_unix_socket=false"
   '';
 }

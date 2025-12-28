@@ -95,7 +95,7 @@ class Opts:
         """
         ...
 
-    def prefer_unix_socket(self, enable: bool) -> "Opts":
+    def upgrade_to_unix_socket(self, enable: bool) -> "Opts":
         """
         Enable or disable automatic upgrade from TCP to Unix socket.
 

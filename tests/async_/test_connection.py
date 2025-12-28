@@ -152,9 +152,9 @@ class TestAsyncOpts:
         await conn.close()
 
     @pytest.mark.asyncio
-    async def test_opts_prefer_unix_socket(self):
-        """Test prefer_unix_socket option."""
-        opts = Opts(get_test_db_url()).prefer_unix_socket(False)
+    async def test_opts_upgrade_to_unix_socket(self):
+        """Test upgrade_to_unix_socket option."""
+        opts = Opts(get_test_db_url()).upgrade_to_unix_socket(False)
         conn = await Conn.new(opts)
         await conn.ping()
         await conn.close()

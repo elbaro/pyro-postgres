@@ -142,8 +142,8 @@ impl Opts {
     ///
     /// # Arguments
     /// * `enable` - Whether to enable upgrade to Unix socket (default: true)
-    fn prefer_unix_socket(mut self_: PyRefMut<Self>, enable: bool) -> PyRefMut<Self> {
-        self_.inner.prefer_unix_socket = enable;
+    fn upgrade_to_unix_socket(mut self_: PyRefMut<Self>, enable: bool) -> PyRefMut<Self> {
+        self_.inner.upgrade_to_unix_socket = enable;
         self_
     }
 
