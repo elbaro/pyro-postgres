@@ -1,8 +1,8 @@
-book/book
-/.claude
+/book/book
+.claude
 /.cargo
 /target
-/CLAUDE.md
+CLAUDE.md
 /uv.lock
 __pycache__
 /.direnv/
