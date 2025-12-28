@@ -5,6 +5,8 @@
   "pull-request-header": " ",
   "pull-request-footer": " ",
   "label": "release",
+  "bump-minor-pre-major": true,
+  "bump-patch-for-minor-pre-major": true,
   "changelog-sections": [
     {
       "type": "feat",
