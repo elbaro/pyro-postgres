@@ -73,17 +73,16 @@ class TestSyncTransactionContextManager:
 
 
 class TestSyncTransactionExplicit:
-    """Test sync transaction with explicit begin/commit/rollback."""
+    """Test sync transaction with explicit commit/rollback."""
 
-    def test_explicit_begin_commit(self):
-        """Test explicit begin and commit."""
+    def test_explicit_commit(self):
+        """Test explicit commit inside context manager."""
         conn = Conn(get_test_db_url())
         setup_test_table_sync(conn)
 
-        txn = conn.tx()
-        txn.begin()
-        conn.query_drop("INSERT INTO test_table (name, age) VALUES ('Alice', 30)")
-        txn.commit()
+        with conn.tx() as tx:
+            conn.query_drop("INSERT INTO test_table (name, age) VALUES ('Alice', 30)")
+            tx.commit()
 
         result = conn.query_first("SELECT name FROM test_table")
         assert result
@@ -92,15 +91,14 @@ class TestSyncTransactionExplicit:
         cleanup_test_table_sync(conn)
         conn.close()
 
-    def test_explicit_begin_rollback(self):
-        """Test explicit begin and rollback."""
+    def test_explicit_rollback(self):
+        """Test explicit rollback inside context manager."""
         conn = Conn(get_test_db_url())
         setup_test_table_sync(conn)
 
-        txn = conn.tx()
-        txn.begin()
-        conn.query_drop("INSERT INTO test_table (name, age) VALUES ('Alice', 30)")
-        txn.rollback()
+        with conn.tx() as tx:
+            conn.query_drop("INSERT INTO test_table (name, age) VALUES ('Alice', 30)")
+            tx.rollback()
 
         result = conn.query_first("SELECT name FROM test_table")
         assert result is None
@@ -108,47 +106,34 @@ class TestSyncTransactionExplicit:
         cleanup_test_table_sync(conn)
         conn.close()
 
-    def test_commit_without_begin_raises(self):
-        """Test commit without begin raises error."""
+    def test_commit_without_context_manager_raises(self):
+        """Test commit without context manager raises error."""
         conn = Conn(get_test_db_url())
 
-        txn = conn.tx()
+        tx = conn.tx()
         with pytest.raises(IncorrectApiUsageError):
-            txn.commit()
+            tx.commit()
 
         conn.close()
 
-    def test_rollback_without_begin_raises(self):
-        """Test rollback without begin raises error."""
+    def test_rollback_without_context_manager_raises(self):
+        """Test rollback without context manager raises error."""
         conn = Conn(get_test_db_url())
 
-        txn = conn.tx()
+        tx = conn.tx()
         with pytest.raises(IncorrectApiUsageError):
-            txn.rollback()
+            tx.rollback()
 
-        conn.close()
-
-    def test_double_begin_raises(self):
-        """Test calling begin twice raises error."""
-        conn = Conn(get_test_db_url())
-
-        txn = conn.tx()
-        txn.begin()
-        with pytest.raises(IncorrectApiUsageError):
-            txn.begin()
-
-        txn.rollback()
         conn.close()
 
     def test_commit_after_commit_raises(self):
         """Test commit after commit raises error."""
         conn = Conn(get_test_db_url())
 
-        txn = conn.tx()
-        txn.begin()
-        txn.commit()
-        with pytest.raises(TransactionClosedError):
-            txn.commit()
+        with conn.tx() as tx:
+            tx.commit()
+            with pytest.raises(TransactionClosedError):
+                tx.commit()
 
         conn.close()
 
@@ -156,11 +141,10 @@ class TestSyncTransactionExplicit:
         """Test rollback after rollback raises error."""
         conn = Conn(get_test_db_url())
 
-        txn = conn.tx()
-        txn.begin()
-        txn.rollback()
-        with pytest.raises(TransactionClosedError):
-            txn.rollback()
+        with conn.tx() as tx:
+            tx.rollback()
+            with pytest.raises(TransactionClosedError):
+                tx.rollback()
 
         conn.close()
 
@@ -168,11 +152,10 @@ class TestSyncTransactionExplicit:
         """Test commit after rollback raises error."""
         conn = Conn(get_test_db_url())
 
-        txn = conn.tx()
-        txn.begin()
-        txn.rollback()
-        with pytest.raises(TransactionClosedError):
-            txn.commit()
+        with conn.tx() as tx:
+            tx.rollback()
+            with pytest.raises(TransactionClosedError):
+                tx.commit()
 
         conn.close()
 
@@ -246,13 +229,6 @@ class TestSyncTransactionIsolationLevel:
 
         level = IsolationLevel("serializable")
         assert level == IsolationLevel.Serializable
-
-    def test_isolation_level_static_methods(self):
-        """Test isolation level static factory methods."""
-        assert IsolationLevel.read_uncommitted() == IsolationLevel.ReadUncommitted
-        assert IsolationLevel.read_committed() == IsolationLevel.ReadCommitted
-        assert IsolationLevel.repeatable_read() == IsolationLevel.RepeatableRead
-        assert IsolationLevel.serializable() == IsolationLevel.Serializable
 
     def test_isolation_level_repr(self):
         """Test isolation level __repr__."""

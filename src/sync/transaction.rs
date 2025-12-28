@@ -38,7 +38,37 @@ impl SyncTransaction {
 #[pymethods]
 impl SyncTransaction {
     fn __enter__(mut slf: PyRefMut<'_, Self>) -> PyResult<PyRefMut<'_, Self>> {
-        slf.begin()?;
+        if slf.started {
+            return Err(Error::IncorrectApiUsageError("Transaction already started").into());
+        }
+        if slf.finished {
+            return Err(Error::TransactionClosedError.into());
+        }
+
+        {
+            let conn = slf.conn.bind(slf.py()).borrow();
+
+            // Build BEGIN command
+            let mut begin_sql = String::from("BEGIN");
+
+            if let Some(ref level) = slf.isolation_level {
+                begin_sql.push_str(" ISOLATION LEVEL ");
+                begin_sql.push_str(level);
+            }
+
+            if let Some(readonly) = slf.readonly {
+                if readonly {
+                    begin_sql.push_str(" READ ONLY");
+                } else {
+                    begin_sql.push_str(" READ WRITE");
+                }
+            }
+
+            conn.query_drop_internal(begin_sql)?;
+            conn.in_transaction.store(true, Ordering::SeqCst);
+        }
+
+        slf.started = true;
         Ok(slf)
     }
 
@@ -60,42 +90,6 @@ impl SyncTransaction {
             }
         }
         Ok(false) // Don't suppress exceptions
-    }
-
-    fn begin(&mut self) -> PyroResult<()> {
-        if self.started {
-            return Err(Error::IncorrectApiUsageError("Transaction already started"));
-        }
-        if self.finished {
-            return Err(Error::TransactionClosedError);
-        }
-
-        Python::attach(|py| {
-            let conn = self.conn.bind(py).borrow();
-
-            // Build BEGIN command
-            let mut begin_sql = String::from("BEGIN");
-
-            if let Some(ref level) = self.isolation_level {
-                begin_sql.push_str(" ISOLATION LEVEL ");
-                begin_sql.push_str(level);
-            }
-
-            if let Some(readonly) = self.readonly {
-                if readonly {
-                    begin_sql.push_str(" READ ONLY");
-                } else {
-                    begin_sql.push_str(" READ WRITE");
-                }
-            }
-
-            conn.query_drop_internal(begin_sql)?;
-            conn.in_transaction.store(true, Ordering::SeqCst);
-            PyroResult::Ok(())
-        })?;
-
-        self.started = true;
-        Ok(())
     }
 
     fn commit(&mut self, py: Python<'_>) -> PyroResult<()> {

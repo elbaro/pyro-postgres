@@ -25,7 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - release-please to release-plz
 - test new wheel build
 - add release-please permissions
-- change relase PR title
+- change release PR title
 - add maturin
 - rename ci.yml to test.yml
 - remove duplicated tests

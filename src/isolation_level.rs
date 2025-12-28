@@ -31,26 +31,6 @@ impl IsolationLevel {
         }
     }
 
-    #[staticmethod]
-    fn read_uncommitted() -> Self {
-        IsolationLevel::ReadUncommitted
-    }
-
-    #[staticmethod]
-    fn read_committed() -> Self {
-        IsolationLevel::ReadCommitted
-    }
-
-    #[staticmethod]
-    fn repeatable_read() -> Self {
-        IsolationLevel::RepeatableRead
-    }
-
-    #[staticmethod]
-    fn serializable() -> Self {
-        IsolationLevel::Serializable
-    }
-
     fn __repr__(&self) -> &'static str {
         match self {
             IsolationLevel::ReadUncommitted => "IsolationLevel.ReadUncommitted",
