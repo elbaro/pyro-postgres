@@ -31,15 +31,9 @@ use crate::{
 #[pyfunction]
 /// Initialize the Tokio runtime thread.
 /// This is called automatically when the module is loaded.
-/// Note: `worker_threads` and `thread_name` parameters are ignored since we use a single-threaded runtime.
-#[pyo3(signature = (worker_threads=None, thread_name=None))]
-fn init(worker_threads: Option<usize>, thread_name: Option<&str>) {
+fn init() {
     // Initialize the global TokioThread
     let _ = tokio_thread::get_tokio_thread();
-
-    // Suppress unused variable warnings
-    let _ = worker_threads;
-    let _ = thread_name;
 }
 
 /// A Python module implemented in Rust.
