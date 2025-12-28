@@ -12,7 +12,7 @@ dependencies = ["typing_extensions"]
 features = ["pyo3/extension-module"]
 
 [dependency-groups]
-dev = ["maturin>=1,<2"]
+dev = ["maturin>=1,<2", "pytest>=8"]
 
 [tool.uv]
 cache-keys = [{ file = "pyproject.toml" }, { file = "pyro_postgres/*.pyi" }, { file = "pyro_postgres/*.py" }, { file = "src/**/*.rs" }]
