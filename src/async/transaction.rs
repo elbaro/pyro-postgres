@@ -222,7 +222,7 @@ impl AsyncTransaction {
         &self,
         py: Python<'_>,
         query: PyBackedStr,
-        params: Option<Py<PyAny>>,
+        params: Params,
     ) -> PyResult<Py<PyroFuture>> {
         if !self.started {
             return Err(Error::IncorrectApiUsageError("Transaction not started").into());
@@ -231,10 +231,6 @@ impl AsyncTransaction {
             return Err(Error::TransactionClosedError.into());
         }
 
-        let params_obj: Params = params
-            .map(|p| p.extract(py))
-            .transpose()?
-            .unwrap_or_default();
         let query_string = query.to_string();
 
         let conn = self.conn.clone_ref(py);
@@ -256,7 +252,7 @@ impl AsyncTransaction {
             let portal_name = format!("pyro_p_{portal_id}");
 
             // Bind the statement to the named portal
-            let params_adapter = ParamsAdapter::new(&params_obj);
+            let params_adapter = ParamsAdapter::new(&params);
             inner
                 .lowlevel_bind(&portal_name, &stmt.wire_name(), params_adapter)
                 .await?;

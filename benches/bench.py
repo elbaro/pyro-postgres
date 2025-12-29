@@ -35,7 +35,7 @@ CREATE TEMP TABLE IF NOT EXISTS benchmark_test (
 
 async def create_pyro_async_conn():
     url = "postgres://test:1234@localhost:5432/test"
-    conn = await pyro_postgres.AsyncConn.new(url)
+    conn = await pyro_postgres.async_.Conn.new(url)
     await conn.exec_drop(CREATE_TEMP_TABLE)
     return conn
 
@@ -81,7 +81,7 @@ def create_psycopg_sync_conn():
 
 
 def create_pyro_sync_conn():
-    conn = pyro_postgres.SyncConn("postgres://test:1234@localhost:5432/test")
+    conn = pyro_postgres.sync.Conn("postgres://test:1234@localhost:5432/test")
     conn.exec_drop(CREATE_TEMP_TABLE)
     return conn
 

@@ -214,14 +214,9 @@ impl AsyncConn {
         &self,
         py: Python<'_>,
         stmt: &Bound<'_, PyAny>,
-        params: Option<Py<PyAny>>,
+        params: Params,
         as_dict: bool,
     ) -> PyResult<Py<PyroFuture>> {
-        let params_obj: Params = params
-            .map(|p| p.extract(py))
-            .transpose()?
-            .unwrap_or_default();
-
         // Extract statement before async block (PreparedStatement is not Send)
         let stmt_input = if let Ok(prepared) = Bound::cast_exact::<PreparedStatement>(stmt) {
             StatementInput::Prepared(prepared.borrow().inner.clone())
@@ -242,7 +237,7 @@ impl AsyncConn {
                 StatementInput::Prepared(prepared) => prepared,
             };
 
-            let params_adapter = ParamsAdapter::new(&params_obj);
+            let params_adapter = ParamsAdapter::new(&params);
             if as_dict {
                 let mut handler = dict_handler.lock().await;
                 handler.clear();
@@ -268,14 +263,9 @@ impl AsyncConn {
         &self,
         py: Python<'_>,
         stmt: &Bound<'_, PyAny>,
-        params: Option<Py<PyAny>>,
+        params: Params,
         as_dict: bool,
     ) -> PyResult<Py<PyroFuture>> {
-        let params_obj: Params = params
-            .map(|p| p.extract(py))
-            .transpose()?
-            .unwrap_or_default();
-
         // Extract statement before async block (PreparedStatement is not Send)
         let stmt_input = if let Ok(prepared) = Bound::cast_exact::<PreparedStatement>(stmt) {
             StatementInput::Prepared(prepared.borrow().inner.clone())
@@ -296,7 +286,7 @@ impl AsyncConn {
                 StatementInput::Prepared(prepared) => prepared,
             };
 
-            let params_adapter = ParamsAdapter::new(&params_obj);
+            let params_adapter = ParamsAdapter::new(&params);
             if as_dict {
                 let mut handler = dict_handler.lock().await;
                 handler.clear();
@@ -322,13 +312,8 @@ impl AsyncConn {
         &self,
         py: Python<'_>,
         stmt: &Bound<'_, PyAny>,
-        params: Option<Py<PyAny>>,
+        params: Params,
     ) -> PyResult<Py<PyroFuture>> {
-        let params_obj: Params = params
-            .map(|p| p.extract(py))
-            .transpose()?
-            .unwrap_or_default();
-
         // Extract statement before async block (PreparedStatement is not Send)
         let stmt_input = if let Ok(prepared) = Bound::cast_exact::<PreparedStatement>(stmt) {
             StatementInput::Prepared(prepared.borrow().inner.clone())
@@ -348,7 +333,7 @@ impl AsyncConn {
             };
 
             let mut handler = DropHandler::default();
-            let params_adapter = ParamsAdapter::new(&params_obj);
+            let params_adapter = ParamsAdapter::new(&params);
             conn.exec(&stmt_ref, params_adapter, &mut handler).await?;
 
             Ok(handler.rows_affected.unwrap_or(0))
@@ -415,19 +400,13 @@ impl AsyncConn {
     ///
     /// result = await conn.exec_iter("SELECT * FROM large_table", (), process)
     /// ```
-    #[pyo3(signature = (stmt, params=Params::default(), callback))]
     fn exec_iter(
         &self,
         py: Python<'_>,
         stmt: &Bound<'_, PyAny>,
-        params: Option<Py<PyAny>>,
+        params: Params,
         callback: Py<PyAny>,
     ) -> PyResult<Py<PyroFuture>> {
-        let params_obj: Params = params
-            .map(|p| p.extract(py))
-            .transpose()?
-            .unwrap_or_default();
-
         // Extract statement before async block (PreparedStatement is not Send)
         let stmt_input = if let Ok(prepared) = Bound::cast_exact::<PreparedStatement>(stmt) {
             StatementInput::Prepared(prepared.borrow().inner.clone())
@@ -446,7 +425,7 @@ impl AsyncConn {
                 StatementInput::Prepared(prepared) => prepared,
             };
 
-            let params_adapter = ParamsAdapter::new(&params_obj);
+            let params_adapter = ParamsAdapter::new(&params);
 
             let result = conn
                 .exec_iter(&stmt_ref, params_adapter, |portal| {

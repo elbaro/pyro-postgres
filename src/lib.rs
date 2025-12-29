@@ -18,11 +18,9 @@ pub mod zero_params_adapter;
 use pyo3::prelude::*;
 
 use crate::{
-    r#async::{conn::AsyncConn, pipeline::AsyncPipeline, transaction::AsyncTransaction},
     isolation_level::IsolationLevel,
     opts::Opts,
     statement::PreparedStatement,
-    sync::{conn::SyncConn, pipeline::SyncPipeline, transaction::SyncTransaction},
     ticket::PyTicket,
     util::PyroFuture,
     value::{PyJson, PyJsonb},
@@ -142,16 +140,9 @@ mod pyro_postgres {
 
         super::init();
 
-        // Alias
         Python::attach(|py| {
             m.add("Opts", py.get_type::<Opts>())?;
             m.add("Ticket", py.get_type::<PyTicket>())?;
-            m.add("AsyncConn", py.get_type::<AsyncConn>())?;
-            m.add("AsyncPipeline", py.get_type::<AsyncPipeline>())?;
-            m.add("AsyncTransaction", py.get_type::<AsyncTransaction>())?;
-            m.add("SyncConn", py.get_type::<SyncConn>())?;
-            m.add("SyncPipeline", py.get_type::<SyncPipeline>())?;
-            m.add("SyncTransaction", py.get_type::<SyncTransaction>())?;
             m.add("Json", py.get_type::<PyJson>())?;
             m.add("Jsonb", py.get_type::<PyJsonb>())?;
             m.add("Statement", py.get_type::<PreparedStatement>())?;

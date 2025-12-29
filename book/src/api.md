@@ -3,7 +3,7 @@
 ## Module Structure
 
 ```
-pyro_postgres           # Opts, IsolationLevel, PreparedStatement, Json, Jsonb, Ticket, init()
+pyro_postgres           # Opts, IsolationLevel, PreparedStatement, Ticket, init()
 ├── sync                # Conn, Transaction, Pipeline, Portal
 ├── async_              # Conn, Transaction, Pipeline, Portal (async)
 └── error               # Exception classes

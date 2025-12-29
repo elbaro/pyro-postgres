@@ -24,15 +24,6 @@ def init() -> None:
     """
     ...
 
-# Compatibility aliases for backward compatibility
-AsyncConn = async_.Conn
-AsyncPipeline = async_.Pipeline
-AsyncTransaction = async_.Transaction
-
-SyncConn = sync.Conn
-SyncPipeline = sync.Pipeline
-SyncTransaction = sync.Transaction
-
 class Opts:
     """
     Connection options for PostgreSQL connections.
