@@ -15,4 +15,11 @@
   - [Batch Execution]()
 - [SQLAlchemy Support]()
 
+# Advanced Topics
+
+- [Client-side Type Checking]()
+- [Protocol]()
+
 # API Reference
+
+- [API Reference](api.md)

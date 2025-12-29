@@ -209,7 +209,7 @@ impl AsyncConn {
 
     // ─── Extended Query Protocol (Binary) ─────────────────────────────────────
 
-    #[pyo3(signature = (stmt, params=None, *, as_dict=false))]
+    #[pyo3(signature = (stmt, params=Params::default(), *, as_dict=false))]
     fn exec(
         &self,
         py: Python<'_>,
@@ -263,7 +263,7 @@ impl AsyncConn {
         })
     }
 
-    #[pyo3(signature = (stmt, params=None, *, as_dict=false))]
+    #[pyo3(signature = (stmt, params=Params::default(), *, as_dict=false))]
     fn exec_first(
         &self,
         py: Python<'_>,
@@ -317,7 +317,7 @@ impl AsyncConn {
         })
     }
 
-    #[pyo3(signature = (stmt, params=None))]
+    #[pyo3(signature = (stmt, params=Params::default()))]
     fn exec_drop(
         &self,
         py: Python<'_>,
@@ -415,7 +415,7 @@ impl AsyncConn {
     ///
     /// result = await conn.exec_iter("SELECT * FROM large_table", (), process)
     /// ```
-    #[pyo3(signature = (stmt, params, callback))]
+    #[pyo3(signature = (stmt, params=Params::default(), callback))]
     fn exec_iter(
         &self,
         py: Python<'_>,

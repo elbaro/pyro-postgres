@@ -217,7 +217,7 @@ impl AsyncTransaction {
     ///     await portal1.close()
     ///     await portal2.close()
     /// ```
-    #[pyo3(signature = (query, params=None))]
+    #[pyo3(signature = (query, params=Params::default()))]
     fn exec_portal(
         &self,
         py: Python<'_>,

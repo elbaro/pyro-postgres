@@ -15,22 +15,22 @@ from typing import Any, Awaitable, TypeVar
 from . import async_, sync
 from . import error as error
 
-def init(worker_threads: int | None = 1, thread_name: str | None = None) -> None:
+def init() -> None:
     """
     Initialize the Tokio runtime for async operations.
-    This function can be called multiple times until any async operation is called.
 
-    Args:
-        worker_threads: Number of worker threads for the Tokio runtime. If None, set to the number of CPUs.
-        thread_name: Name prefix for worker threads.
+    This function is called automatically when the module is loaded.
+    It can be called explicitly but has no effect after first initialization.
     """
     ...
 
 # Compatibility aliases for backward compatibility
 AsyncConn = async_.Conn
+AsyncPipeline = async_.Pipeline
 AsyncTransaction = async_.Transaction
 
 SyncConn = sync.Conn
+SyncPipeline = sync.Pipeline
 SyncTransaction = sync.Transaction
 
 class Opts:
@@ -173,28 +173,102 @@ class IsolationLevel:
     RepeatableRead: "IsolationLevel"
     Serializable: "IsolationLevel"
 
-    @property
-    def name(self) -> str:
-        """Return the isolation level as a string."""
+    def __new__(cls, level: str) -> "IsolationLevel":
+        """
+        Create an IsolationLevel from a string.
+
+        Args:
+            level: One of "read uncommitted", "read committed", "repeatable read", "serializable"
+                   (also accepts underscore and camelCase variants).
+        """
+        ...
+
+    def __repr__(self) -> str:
+        """Return the isolation level representation."""
         ...
 
 class PreparedStatement:
     """
     A prepared statement that can be reused for efficient query execution.
 
-    Created via `conn.prepare()` and used with `pipeline.exec()`:
+    Created via `conn.prepare()` and used with `conn.exec()` or `pipeline.exec()`:
 
     ```python
-    prepared = conn.prepare("INSERT INTO users (name) VALUES ($1)")
-    with conn.pipeline() as p:
+    prepared = await conn.prepare("INSERT INTO users (name) VALUES ($1)")
+
+    # Use with connection
+    await conn.exec(prepared, ("Alice",))
+
+    # Or use with pipeline
+    async with conn.pipeline() as p:
         t1 = p.exec(prepared, ("Alice",))
         t2 = p.exec(prepared, ("Bob",))
-        p.sync()
-        p.claim_drop(t1)
-        p.claim_drop(t2)
+        await p.sync()
+        await p.claim_drop(t1)
+        await p.claim_drop(t2)
     ```
     """
 
     ...
 
 Statement = str | PreparedStatement
+
+class Ticket:
+    """
+    A ticket representing a queued pipeline operation.
+
+    Created by `Pipeline.exec()` and used to claim results after `Pipeline.sync()`.
+    Tickets must be claimed in the order they were created.
+    """
+
+    ...
+
+class Json:
+    """
+    Wrapper for JSON data to explicitly send as PostgreSQL JSON type.
+
+    Use this when you want to ensure data is sent as JSON (OID 114) rather than text.
+
+    Examples:
+        # From a dict/list (will be serialized)
+        await conn.exec("INSERT INTO t (data) VALUES ($1)", (Json({"key": "value"}),))
+
+        # From a string (used as-is)
+        await conn.exec("INSERT INTO t (data) VALUES ($1)", (Json('{"key": "value"}'),))
+    """
+
+    def __new__(cls, data: Any) -> "Json":
+        """
+        Create a Json wrapper.
+
+        Args:
+            data: Python object to serialize as JSON, or a JSON string.
+        """
+        ...
+
+    def __repr__(self) -> str: ...
+
+class Jsonb:
+    """
+    Wrapper for JSONB data to explicitly send as PostgreSQL JSONB type.
+
+    Use this when you want to ensure data is sent as JSONB (OID 3802) rather than text.
+
+    Examples:
+        # From a dict/list (will be serialized)
+        await conn.exec("INSERT INTO t (data) VALUES ($1)", (Jsonb({"key": "value"}),))
+
+        # From a string (used as-is)
+        await conn.exec("INSERT INTO t (data) VALUES ($1)", (Jsonb('{"key": "value"}'),))
+    """
+
+    def __new__(cls, data: Any) -> "Jsonb":
+        """
+        Create a Jsonb wrapper.
+
+        Args:
+            data: Python object to serialize as JSONB, or a JSON string.
+        """
+        ...
+
+    def __repr__(self) -> str: ...

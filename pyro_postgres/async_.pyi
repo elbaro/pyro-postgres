@@ -10,6 +10,7 @@ from pyro_postgres import (
     PreparedStatement,
     PyroFuture,
     Statement,
+    Ticket,
 )
 
 T = TypeVar("T")
@@ -127,8 +128,8 @@ class Transaction:
         exc_type: type[BaseException] | None,
         exc_value: BaseException | None,
         traceback: TracebackType | None,
-    ) -> PyroFuture[None]:
-        """Exit the async context manager. Automatically rolls back if not committed."""
+    ) -> PyroFuture[bool]:
+        """Exit the async context manager. Automatically commits or rolls back."""
         ...
 
     def commit(self) -> PyroFuture[None]:
@@ -173,6 +174,160 @@ class Transaction:
                 await portal1.close()
                 await portal2.close()
             ```
+        """
+        ...
+
+class Pipeline:
+    """
+    Async pipeline mode for batching multiple queries.
+
+    Created via `conn.pipeline()` and used as an async context manager.
+    Pipeline mode allows sending multiple queries without waiting for responses,
+    then syncing and claiming results in order.
+
+    Example:
+        ```python
+        async with conn.pipeline() as p:
+            t1 = p.exec("SELECT $1::int", (1,))
+            t2 = p.exec("SELECT $1::int", (2,))
+            await p.sync()
+            result1 = await p.claim_one(t1)
+            result2 = await p.claim_collect(t2)
+        ```
+    """
+
+    def __aenter__(self) -> PyroFuture["Pipeline"]:
+        """Enter the async context manager. Returns the pipeline."""
+        ...
+
+    def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> PyroFuture[bool]:
+        """Exit the async context manager. Cleans up the pipeline."""
+        ...
+
+    def exec(self, query: Statement, params: Params = ()) -> Ticket:
+        """
+        Queue a statement execution.
+
+        Accepts either a SQL query string or a PreparedStatement.
+        Returns a Ticket that must be claimed later using claim_one, claim_collect, or claim_drop.
+
+        Args:
+            query: SQL query string or PreparedStatement.
+            params: Query parameters.
+
+        Returns:
+            A Ticket to claim results after sync().
+        """
+        ...
+
+    def sync(self) -> PyroFuture[None]:
+        """
+        Send SYNC message to establish transaction boundary.
+
+        After calling sync(), you must claim all queued operations in order.
+        """
+        ...
+
+    @overload
+    def claim_one(
+        self, ticket: Ticket, *, as_dict: Literal[False] = False
+    ) -> PyroFuture[tuple[Any, ...] | None]: ...
+    @overload
+    def claim_one(
+        self, ticket: Ticket, *, as_dict: Literal[True]
+    ) -> PyroFuture[dict[str, Any] | None]: ...
+    def claim_one(
+        self, ticket: Ticket, *, as_dict: bool = False
+    ) -> PyroFuture[tuple[Any, ...] | dict[str, Any] | None]:
+        """
+        Claim and return just the first row (or None).
+
+        Results must be claimed in the same order they were queued.
+
+        Args:
+            ticket: The ticket from exec().
+            as_dict: If True, return row as dictionary.
+
+        Returns:
+            First row or None if no results.
+        """
+        ...
+
+    @overload
+    def claim_collect(
+        self, ticket: Ticket, *, as_dict: Literal[False] = False
+    ) -> PyroFuture[list[tuple[Any, ...]]]: ...
+    @overload
+    def claim_collect(
+        self, ticket: Ticket, *, as_dict: Literal[True]
+    ) -> PyroFuture[list[dict[str, Any]]]: ...
+    def claim_collect(
+        self, ticket: Ticket, *, as_dict: bool = False
+    ) -> PyroFuture[list[tuple[Any, ...]] | list[dict[str, Any]]]:
+        """
+        Claim and collect all rows.
+
+        Results must be claimed in the same order they were queued.
+
+        Args:
+            ticket: The ticket from exec().
+            as_dict: If True, return rows as dictionaries.
+
+        Returns:
+            List of rows.
+        """
+        ...
+
+    def claim_drop(self, ticket: Ticket) -> PyroFuture[None]:
+        """
+        Claim and discard all rows.
+
+        Results must be claimed in the same order they were queued.
+
+        Args:
+            ticket: The ticket from exec().
+        """
+        ...
+
+    @overload
+    def claim(
+        self, ticket: Ticket, *, as_dict: Literal[False] = False
+    ) -> PyroFuture[list[tuple[Any, ...]]]: ...
+    @overload
+    def claim(
+        self, ticket: Ticket, *, as_dict: Literal[True]
+    ) -> PyroFuture[list[dict[str, Any]]]: ...
+    def claim(
+        self, ticket: Ticket, *, as_dict: bool = False
+    ) -> PyroFuture[list[tuple[Any, ...]] | list[dict[str, Any]]]:
+        """
+        Claim and collect all rows (alias for claim_collect).
+
+        Results must be claimed in the same order they were queued.
+
+        Args:
+            ticket: The ticket from exec().
+            as_dict: If True, return rows as dictionaries.
+
+        Returns:
+            List of rows.
+        """
+        ...
+
+    def pending_count(self) -> int:
+        """
+        Returns the number of operations that have been queued but not yet claimed.
+        """
+        ...
+
+    def is_aborted(self) -> bool:
+        """
+        Returns true if the pipeline is in aborted state due to an error.
         """
         ...
 
@@ -221,7 +376,26 @@ class Conn:
         """
         ...
 
-    async def id(self) -> int: ...
+    def pipeline(self) -> Pipeline:
+        """
+        Create a pipeline for batching multiple queries.
+
+        Use as an async context manager:
+        ```python
+        async with conn.pipeline() as p:
+            t1 = p.exec("SELECT $1::int", (1,))
+            t2 = p.exec("SELECT $1::int", (2,))
+            await p.sync()
+            result1 = await p.claim_one(t1)
+            result2 = await p.claim_collect(t2)
+        ```
+        """
+        ...
+
+    def id(self) -> PyroFuture[int]:
+        """Return the connection ID."""
+        ...
+
     def ping(self) -> PyroFuture[None]:
         """Ping the server to check connection."""
         ...
@@ -385,14 +559,14 @@ class Conn:
         ...
 
     def exec_batch(
-        self, stmt: Statement, params: Sequence[Params] = []
+        self, stmt: Statement, params_list: Sequence[Params]
     ) -> PyroFuture[None]:
         """
         Execute a statement multiple times with different parameters.
 
         Args:
             stmt: SQL query string or PreparedStatement.
-            params: List of parameter sets.
+            params_list: List of parameter sets.
         """
         ...
 
@@ -432,7 +606,7 @@ class Conn:
         """
         ...
 
-    async def close(self) -> None:
+    def close(self) -> PyroFuture[None]:
         """
         Disconnect from the PostgreSQL server.
 
@@ -440,4 +614,8 @@ class Conn:
         """
         ...
 
-    def server_version(self) -> PyroFuture[str]: ...
+    def server_version(self) -> PyroFuture[str]:
+        """
+        Return the PostgreSQL server version.
+        """
+        ...

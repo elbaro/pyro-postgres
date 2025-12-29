@@ -15,7 +15,7 @@ class Transaction:
   def rollback(self) -> None: ...
 ```
 
-The recommended way to use transactions is with a context manager.
+The transactions should be entered as a context manager.
 On successful exit, the transaction commits. On exception, it rolls back.
 
 ```py
@@ -26,12 +26,9 @@ with conn.tx():
 ```
 
 ```py
-try:
-    with conn.tx():
-        conn.query_drop("INSERT INTO users (name) VALUES ('Alice')")
-        raise ValueError("oops")
-except ValueError:
-    pass
+with conn.tx():
+    conn.query_drop("INSERT INTO users (name) VALUES ('Alice')")
+    raise ValueError("oops")
 # auto-rolled back, no data inserted
 ```
 
@@ -54,6 +51,7 @@ with conn.tx() as tx:
 ```py
 from pyro_postgres import IsolationLevel
 
+# BEGIN ISOLATION LEVEL SERIALIZABLE
 with conn.tx(isolation_level=IsolationLevel.Serializable):
     ...
 ```
@@ -80,7 +78,7 @@ assert level.as_str() == "SERIALIZABLE"
 Set `readonly=True` for read-only transactions. This can improve performance and is required for read replicas.
 
 ```py
-with conn.tx(readonly=True):
+with conn.tx(readonly=True):  # BEGIN READ ONLY
     rows = conn.query("SELECT * FROM users")
 ```
 

@@ -3,7 +3,14 @@
 from types import TracebackType
 from typing import Any, Callable, Literal, Self, Sequence, TypeVar, overload
 
-from pyro_postgres import IsolationLevel, Opts, Params, PreparedStatement, Statement
+from pyro_postgres import (
+    IsolationLevel,
+    Opts,
+    Params,
+    PreparedStatement,
+    Statement,
+    Ticket,
+)
 
 T = TypeVar("T")
 
@@ -106,7 +113,7 @@ class Transaction:
         type_: type[BaseException] | None,
         value: BaseException | None,
         traceback: TracebackType | None,
-    ) -> None: ...
+    ) -> bool: ...
     def commit(self) -> None:
         """Commit the transaction."""
         ...
@@ -152,6 +159,154 @@ class Transaction:
         """
         ...
 
+class Pipeline:
+    """
+    Synchronous pipeline mode for batching multiple queries.
+
+    Created via `conn.pipeline()` and used as a context manager.
+    Pipeline mode allows sending multiple queries without waiting for responses,
+    then syncing and claiming results in order.
+
+    Example:
+        ```python
+        with conn.pipeline() as p:
+            t1 = p.exec("SELECT $1::int", (1,))
+            t2 = p.exec("SELECT $1::int", (2,))
+            p.sync()
+            result1 = p.claim_one(t1)
+            result2 = p.claim_collect(t2)
+        ```
+    """
+
+    def __enter__(self) -> Self: ...
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> bool: ...
+    def exec(self, query: Statement, params: Params = ()) -> Ticket:
+        """
+        Queue a statement execution.
+
+        Accepts either a SQL query string or a PreparedStatement.
+        Returns a Ticket that must be claimed later using claim_one, claim_collect, or claim_drop.
+
+        Args:
+            query: SQL query string or PreparedStatement.
+            params: Query parameters.
+
+        Returns:
+            A Ticket to claim results after sync().
+        """
+        ...
+
+    def sync(self) -> None:
+        """
+        Send SYNC message to establish transaction boundary.
+
+        After calling sync(), you must claim all queued operations in order.
+        """
+        ...
+
+    @overload
+    def claim_one(
+        self, ticket: Ticket, *, as_dict: Literal[False] = False
+    ) -> tuple[Any, ...] | None: ...
+    @overload
+    def claim_one(
+        self, ticket: Ticket, *, as_dict: Literal[True]
+    ) -> dict[str, Any] | None: ...
+    def claim_one(
+        self, ticket: Ticket, *, as_dict: bool = False
+    ) -> tuple[Any, ...] | dict[str, Any] | None:
+        """
+        Claim and return just the first row (or None).
+
+        Results must be claimed in the same order they were queued.
+
+        Args:
+            ticket: The ticket from exec().
+            as_dict: If True, return row as dictionary.
+
+        Returns:
+            First row or None if no results.
+        """
+        ...
+
+    @overload
+    def claim_collect(
+        self, ticket: Ticket, *, as_dict: Literal[False] = False
+    ) -> list[tuple[Any, ...]]: ...
+    @overload
+    def claim_collect(
+        self, ticket: Ticket, *, as_dict: Literal[True]
+    ) -> list[dict[str, Any]]: ...
+    def claim_collect(
+        self, ticket: Ticket, *, as_dict: bool = False
+    ) -> list[tuple[Any, ...]] | list[dict[str, Any]]:
+        """
+        Claim and collect all rows.
+
+        Results must be claimed in the same order they were queued.
+
+        Args:
+            ticket: The ticket from exec().
+            as_dict: If True, return rows as dictionaries.
+
+        Returns:
+            List of rows.
+        """
+        ...
+
+    def claim_drop(self, ticket: Ticket) -> None:
+        """
+        Claim and discard all rows.
+
+        Results must be claimed in the same order they were queued.
+
+        Args:
+            ticket: The ticket from exec().
+        """
+        ...
+
+    @overload
+    def claim(
+        self, ticket: Ticket, *, as_dict: Literal[False] = False
+    ) -> list[tuple[Any, ...]]: ...
+    @overload
+    def claim(
+        self, ticket: Ticket, *, as_dict: Literal[True]
+    ) -> list[dict[str, Any]]: ...
+    def claim(
+        self, ticket: Ticket, *, as_dict: bool = False
+    ) -> list[tuple[Any, ...]] | list[dict[str, Any]]:
+        """
+        Claim and collect all rows (alias for claim_collect).
+
+        Results must be claimed in the same order they were queued.
+
+        Args:
+            ticket: The ticket from exec().
+            as_dict: If True, return rows as dictionaries.
+
+        Returns:
+            List of rows.
+        """
+        ...
+
+    def pending_count(self) -> int:
+        """
+        Returns the number of operations that have been queued but not yet claimed.
+        """
+        ...
+
+    def is_aborted(self) -> bool:
+        """
+        Returns true if the pipeline is in aborted state due to an error.
+        """
+        ...
+
 class Conn:
     """
     Synchronous PostgreSQL connection.
@@ -170,8 +325,39 @@ class Conn:
         self,
         isolation_level: IsolationLevel | None = None,
         readonly: bool | None = None,
-    ) -> Transaction: ...
-    def id(self) -> int: ...
+    ) -> Transaction:
+        """
+        Start a new transaction.
+
+        Args:
+            isolation_level: Transaction isolation level.
+            readonly: Whether the transaction is read-only.
+
+        Returns:
+            New Transaction instance.
+        """
+        ...
+
+    def pipeline(self) -> Pipeline:
+        """
+        Create a pipeline for batching multiple queries.
+
+        Use as a context manager:
+        ```python
+        with conn.pipeline() as p:
+            t1 = p.exec("SELECT $1::int", (1,))
+            t2 = p.exec("SELECT $1::int", (2,))
+            p.sync()
+            result1 = p.claim_one(t1)
+            result2 = p.claim_collect(t2)
+        ```
+        """
+        ...
+
+    def id(self) -> int:
+        """Return the connection ID."""
+        ...
+
     def ping(self) -> None:
         """Ping the server to check connection."""
         ...
@@ -383,4 +569,8 @@ class Conn:
         """
         ...
 
-    def server_version(self) -> str: ...
+    def server_version(self) -> str:
+        """
+        Return the PostgreSQL server version.
+        """
+        ...
