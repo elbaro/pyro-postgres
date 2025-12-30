@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1](https://github.com/elbaro/pyro-postgres/compare/v0.3.0...v0.3.1) (2025-12-30)
+
+
+### Bug Fixes
+
+* apply ci patches from pyro-mysql ([e2dfcad](https://github.com/elbaro/pyro-postgres/commit/e2dfcad56914c5f1964ff1453ed030b8172b76d0))
+* **ci:** add openssl in linux, and use python 3.10 in windows ([2d4d532](https://github.com/elbaro/pyro-postgres/commit/2d4d532186e684b1b0473e5c6394f44493f882a6))
+* **ci:** use debian command, not centos ([e14d9d0](https://github.com/elbaro/pyro-postgres/commit/e14d9d09ee85a647d95d7d628a0c435f43eedf51))
+
 ## [0.3.0](https://github.com/elbaro/pyro-postgres/compare/pyro_postgres-v0.2.1...pyro_postgres-v0.3.0) (2025-12-29)
 
 
