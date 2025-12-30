@@ -1507,9 +1507,9 @@ dependencies = [
 
 [[package]]
 name = "zero-postgres"
-version = "0.4.2"
+version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3fc142da324b744d52b73ecafc539547dba0be66d465874b3f318f19085aecc0"
+checksum = "9dd18d7ede28f22fed7c5573c25f2b5818a37b0837ae68da707b7dba85fa8503"
 dependencies = [
  "base64",
  "crossbeam-queue",
@@ -1606,6 +1606,6 @@ dependencies = [
 
 [[package]]
 name = "zmij"
-version = "1.0.2"
+version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0f4a4e8e9dc5c62d159f04fcdbe07f4c3fb710415aab4754bf11505501e3251d"
+checksum = "e9747e91771f56fd7893e1164abd78febd14a670ceec257caad15e051de35f06"
