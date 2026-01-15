@@ -428,7 +428,7 @@ impl AsyncConn {
             let params_adapter = ParamsAdapter::new(&params);
 
             let result = conn
-                .exec_portal(&stmt_ref, params_adapter, |portal| {
+                .exec_portal(&stmt_ref, params_adapter, async |portal| {
                     // Create a channel for fetch requests from the Python callback
                     let (request_tx, request_rx) =
                         std::sync::mpsc::channel::<crate::r#async::unnamed_portal::FetchRequest>();
@@ -445,17 +445,61 @@ impl AsyncConn {
                         })
                     });
 
-                    // SAFETY: The portal reference is valid for the lifetime of the exec_portal
-                    // call. The future we return is awaited within exec_portal, so the portal
-                    // remains valid for the entire duration of the async operation.
-                    // We extend the lifetime to 'static to satisfy the borrow checker.
-                    let portal_ptr = portal as *mut zero_postgres::tokio::UnnamedPortal<'_>;
-                    let portal_static = unsafe {
-                        &mut *(portal_ptr as *mut zero_postgres::tokio::UnnamedPortal<'static>)
-                    };
+                    // Process fetch requests until the callback finishes
+                    loop {
+                        // Check if there's a fetch request
+                        match request_rx.try_recv() {
+                            Ok(request) => {
+                                // Perform the async fetch
+                                let result = if request.as_dict {
+                                    let mut handler = DictHandler::new();
+                                    match portal.fetch(request.max_rows, &mut handler).await {
+                                        Ok(has_more) => Python::attach(|py| {
+                                            let rows: Vec<Py<PyDict>> =
+                                                handler.rows_to_python(py)?;
+                                            let list = PyList::new(py, rows)?;
+                                            Ok((list.unbind(), has_more))
+                                        }),
+                                        Err(e) => Err(e.into()),
+                                    }
+                                } else {
+                                    let mut handler = TupleHandler::new();
+                                    match portal.fetch(request.max_rows, &mut handler).await {
+                                        Ok(has_more) => Python::attach(|py| {
+                                            let rows: Vec<Py<PyTuple>> =
+                                                handler.rows_to_python(py)?;
+                                            let list = PyList::new(py, rows)?;
+                                            Ok((list.unbind(), has_more))
+                                        }),
+                                        Err(e) => Err(e.into()),
+                                    }
+                                };
 
-                    // Return a future that handles fetch requests and waits for callback
-                    handle_fetch_requests(portal_static, request_rx, callback_handle)
+                                // Send the result back to the Python callback
+                                let _ = request.response_tx.send(result);
+                            }
+                            Err(std::sync::mpsc::TryRecvError::Empty) => {
+                                // Check if callback thread is done
+                                if callback_handle.is_finished() {
+                                    break;
+                                }
+                                // Yield to allow other async work
+                                tokio::task::yield_now().await;
+                            }
+                            Err(std::sync::mpsc::TryRecvError::Disconnected) => {
+                                // Channel closed, callback must be done
+                                break;
+                            }
+                        }
+                    }
+
+                    // Get the callback result
+                    callback_handle
+                        .join()
+                        .map_err(|_| {
+                            zero_postgres::Error::Protocol("callback thread panicked".into())
+                        })?
+                        .map_err(|e: PyErr| zero_postgres::Error::Protocol(e.to_string()))
                 })
                 .await?;
             Ok(result)
@@ -520,69 +564,4 @@ impl AsyncConn {
 
         Ok(())
     }
-}
-
-/// Async helper to handle fetch requests from the Python callback thread.
-///
-/// This function runs on the tokio runtime and processes fetch requests
-/// sent from the Python callback (running on a separate thread) via a channel.
-async fn handle_fetch_requests(
-    portal: &mut zero_postgres::tokio::UnnamedPortal<'static>,
-    request_rx: std::sync::mpsc::Receiver<crate::r#async::unnamed_portal::FetchRequest>,
-    callback_handle: std::thread::JoinHandle<PyResult<Py<PyAny>>>,
-) -> Result<Py<PyAny>, zero_postgres::Error> {
-    use crate::r#async::handler::{DictHandler, TupleHandler};
-    use pyo3::types::{PyDict, PyList, PyTuple};
-
-    // Process fetch requests until the callback finishes
-    loop {
-        // Check if there's a fetch request
-        match request_rx.try_recv() {
-            Ok(request) => {
-                // Perform the async fetch
-                let result = if request.as_dict {
-                    let mut handler = DictHandler::new();
-                    match portal.fetch(request.max_rows, &mut handler).await {
-                        Ok(has_more) => Python::attach(|py| {
-                            let rows: Vec<Py<PyDict>> = handler.rows_to_python(py)?;
-                            let list = PyList::new(py, rows)?;
-                            Ok((list.unbind(), has_more))
-                        }),
-                        Err(e) => Err(e.into()),
-                    }
-                } else {
-                    let mut handler = TupleHandler::new();
-                    match portal.fetch(request.max_rows, &mut handler).await {
-                        Ok(has_more) => Python::attach(|py| {
-                            let rows: Vec<Py<PyTuple>> = handler.rows_to_python(py)?;
-                            let list = PyList::new(py, rows)?;
-                            Ok((list.unbind(), has_more))
-                        }),
-                        Err(e) => Err(e.into()),
-                    }
-                };
-
-                // Send the result back to the Python callback
-                let _ = request.response_tx.send(result);
-            }
-            Err(std::sync::mpsc::TryRecvError::Empty) => {
-                // Check if callback thread is done
-                if callback_handle.is_finished() {
-                    break;
-                }
-                // Yield to allow other async work
-                tokio::task::yield_now().await;
-            }
-            Err(std::sync::mpsc::TryRecvError::Disconnected) => {
-                // Channel closed, callback must be done
-                break;
-            }
-        }
-    }
-
-    // Get the callback result
-    callback_handle
-        .join()
-        .map_err(|_| zero_postgres::Error::Protocol("callback thread panicked".into()))?
-        .map_err(|e: PyErr| zero_postgres::Error::Protocol(e.to_string()))
 }

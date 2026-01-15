@@ -6,7 +6,7 @@
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyTuple};
 use zero_postgres::Result;
-use zero_postgres::handler::{BinaryHandler, TextHandler};
+use zero_postgres::handler::{ExtendedHandler, SimpleHandler};
 use zero_postgres::protocol::backend::query::{CommandComplete, DataRow, RowDescription};
 
 use crate::from_wire_value::{decode_binary_to_python, decode_text_to_python};
@@ -77,7 +77,7 @@ impl TupleHandler {
     }
 }
 
-impl TextHandler for TupleHandler {
+impl SimpleHandler for TupleHandler {
     fn row(&mut self, cols: RowDescription<'_>, row: DataRow<'_>) -> Result<()> {
         self.format = DataFormat::Text;
         let fields = cols.fields();
@@ -99,7 +99,7 @@ impl TextHandler for TupleHandler {
     }
 }
 
-impl BinaryHandler for TupleHandler {
+impl ExtendedHandler for TupleHandler {
     fn row(&mut self, cols: RowDescription<'_>, row: DataRow<'_>) -> Result<()> {
         self.format = DataFormat::Binary;
         let fields = cols.fields();
@@ -172,7 +172,7 @@ impl DictHandler {
     }
 }
 
-impl TextHandler for DictHandler {
+impl SimpleHandler for DictHandler {
     fn row(&mut self, cols: RowDescription<'_>, row: DataRow<'_>) -> Result<()> {
         self.format = DataFormat::Text;
         let fields = cols.fields();
@@ -194,7 +194,7 @@ impl TextHandler for DictHandler {
     }
 }
 
-impl BinaryHandler for DictHandler {
+impl ExtendedHandler for DictHandler {
     fn row(&mut self, cols: RowDescription<'_>, row: DataRow<'_>) -> Result<()> {
         self.format = DataFormat::Binary;
         let fields = cols.fields();
@@ -222,7 +222,7 @@ pub struct DropHandler {
     pub rows_affected: Option<u64>,
 }
 
-impl TextHandler for DropHandler {
+impl SimpleHandler for DropHandler {
     fn row(&mut self, _cols: RowDescription<'_>, _row: DataRow<'_>) -> Result<()> {
         Ok(())
     }
@@ -233,7 +233,7 @@ impl TextHandler for DropHandler {
     }
 }
 
-impl BinaryHandler for DropHandler {
+impl ExtendedHandler for DropHandler {
     fn row(&mut self, _cols: RowDescription<'_>, _row: DataRow<'_>) -> Result<()> {
         Ok(())
     }

@@ -3,7 +3,7 @@
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList};
 use zero_postgres::Result;
-use zero_postgres::handler::{BinaryHandler, TextHandler};
+use zero_postgres::handler::{ExtendedHandler, SimpleHandler};
 use zero_postgres::protocol::backend::query::{CommandComplete, DataRow, RowDescription};
 
 use crate::from_wire_value::{decode_binary_to_python, decode_text_to_python};
@@ -34,7 +34,7 @@ impl<'py> TupleHandler<'py> {
     }
 }
 
-impl TextHandler for TupleHandler<'_> {
+impl SimpleHandler for TupleHandler<'_> {
     fn row(&mut self, cols: RowDescription<'_>, row: DataRow<'_>) -> Result<()> {
         let fields = cols.fields();
         let tuple = PyTupleBuilder::new(self.py, fields.len());
@@ -62,7 +62,7 @@ impl TextHandler for TupleHandler<'_> {
     }
 }
 
-impl BinaryHandler for TupleHandler<'_> {
+impl ExtendedHandler for TupleHandler<'_> {
     fn row(&mut self, cols: RowDescription<'_>, row: DataRow<'_>) -> Result<()> {
         let fields = cols.fields();
         let tuple = PyTupleBuilder::new(self.py, fields.len());
@@ -115,7 +115,7 @@ impl<'py> DictHandler<'py> {
     }
 }
 
-impl TextHandler for DictHandler<'_> {
+impl SimpleHandler for DictHandler<'_> {
     fn row(&mut self, cols: RowDescription<'_>, row: DataRow<'_>) -> Result<()> {
         let dict = PyDict::new(self.py);
 
@@ -139,7 +139,7 @@ impl TextHandler for DictHandler<'_> {
     }
 }
 
-impl BinaryHandler for DictHandler<'_> {
+impl ExtendedHandler for DictHandler<'_> {
     fn row(&mut self, cols: RowDescription<'_>, row: DataRow<'_>) -> Result<()> {
         let dict = PyDict::new(self.py);
 
@@ -169,7 +169,7 @@ pub struct DropHandler {
     pub rows_affected: Option<u64>,
 }
 
-impl TextHandler for DropHandler {
+impl SimpleHandler for DropHandler {
     fn row(&mut self, _cols: RowDescription<'_>, _row: DataRow<'_>) -> Result<()> {
         Ok(())
     }
@@ -180,7 +180,7 @@ impl TextHandler for DropHandler {
     }
 }
 
-impl BinaryHandler for DropHandler {
+impl ExtendedHandler for DropHandler {
     fn row(&mut self, _cols: RowDescription<'_>, _row: DataRow<'_>) -> Result<()> {
         Ok(())
     }
