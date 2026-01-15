@@ -325,7 +325,7 @@ impl SyncConn {
         match stmt {
             Either::Left(query) => {
                 let prepared = conn.prepare(&query)?;
-                Ok(conn.exec_iter(&prepared, params_adapter, |portal| {
+                Ok(conn.exec_portal(&prepared, params_adapter, |portal| {
                     let py_portal = unsafe { SyncUnnamedPortal::new(portal) };
                     let py_portal_obj = Py::new(py, py_portal)
                         .map_err(|e| zero_postgres::Error::Protocol(e.to_string()))?;
@@ -337,7 +337,7 @@ impl SyncConn {
             }
             Either::Right(prepared) => {
                 let stmt_ref = &prepared.borrow(py).inner;
-                Ok(conn.exec_iter(stmt_ref, params_adapter, |portal| {
+                Ok(conn.exec_portal(stmt_ref, params_adapter, |portal| {
                     let py_portal = unsafe { SyncUnnamedPortal::new(portal) };
                     let py_portal_obj = Py::new(py, py_portal)
                         .map_err(|e| zero_postgres::Error::Protocol(e.to_string()))?;

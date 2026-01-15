@@ -1507,9 +1507,9 @@ dependencies = [
 
 [[package]]
 name = "zero-postgres"
-version = "0.4.3"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9dd18d7ede28f22fed7c5573c25f2b5818a37b0837ae68da707b7dba85fa8503"
+checksum = "c3fbcbd1613322b0d363e1057c19f21a4df5564922ff6382006e2bc9bfea3192"
 dependencies = [
  "base64",
  "crossbeam-queue",
@@ -1527,7 +1527,19 @@ dependencies = [
  "tokio",
  "tracing",
  "url",
+ "zero-postgres-derive",
  "zerocopy",
+]
+
+[[package]]
+name = "zero-postgres-derive"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1ebbb2771b8d2407eda7ffd8859ed9232878ad8161fc54342dddedf65ab09677"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]

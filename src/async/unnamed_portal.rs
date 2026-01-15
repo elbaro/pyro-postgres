@@ -20,7 +20,7 @@ pub struct FetchRequest {
 
 /// Python wrapper for an async unnamed portal.
 ///
-/// This allows iterative row fetching within an `exec_iter` callback.
+/// This allows iterative row fetching within an `exec_portal` callback.
 /// The portal communicates with the async runtime via channels.
 #[pyclass(module = "pyro_postgres.async_", name = "UnnamedPortal", unsendable)]
 pub struct AsyncUnnamedPortal {

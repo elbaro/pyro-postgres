@@ -428,7 +428,7 @@ impl AsyncConn {
             let params_adapter = ParamsAdapter::new(&params);
 
             let result = conn
-                .exec_iter(&stmt_ref, params_adapter, |portal| {
+                .exec_portal(&stmt_ref, params_adapter, |portal| {
                     // Create a channel for fetch requests from the Python callback
                     let (request_tx, request_rx) =
                         std::sync::mpsc::channel::<crate::r#async::unnamed_portal::FetchRequest>();
@@ -445,8 +445,8 @@ impl AsyncConn {
                         })
                     });
 
-                    // SAFETY: The portal reference is valid for the lifetime of the exec_iter
-                    // call. The future we return is awaited within exec_iter, so the portal
+                    // SAFETY: The portal reference is valid for the lifetime of the exec_portal
+                    // call. The future we return is awaited within exec_portal, so the portal
                     // remains valid for the entire duration of the async operation.
                     // We extend the lifetime to 'static to satisfy the borrow checker.
                     let portal_ptr = portal as *mut zero_postgres::tokio::UnnamedPortal<'_>;

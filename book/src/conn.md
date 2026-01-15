@@ -8,18 +8,19 @@ An URL can start with
 - `postgres://`
 - `postgresql://`
 
-The URL `pg://{USER}:{PASSWORD}@{HOST}:{PORT}/{DATABASE}?PARAM1=VALUE1&PARAM2=VALUE2` is equivalent to
+The URL `pg://{USER}:{PASSWORD}@{HOST}:{PORT}/{DATABASE}?sslmode=require` is equivalent to
 
 ```py
 Opts()
-  .username('USER')
-  .password('USER')
-  .hostname('HOST')
-  .port('PORT')
+  .user('USER')
+  .password('PASSWORD')
+  .host('HOST')
+  .port(5432)
   .db('DATABASE')
-  .param1('VALUE1')
-  .param2('VALUE2')
+  .ssl_mode('require')
 ```
+
+For the full list of options, see the [type stub](https://github.com/elbaro/pyro-postgres/blob/main/pyro_postgres/__init__.pyi).
 
 ### Example: basic
 
@@ -31,7 +32,7 @@ from pyro_postgres import Opts
 conn1 = Conn("pg://test:1234@localhost:5432/test_db?sslmode=require")
 
 # url + Opts
-conn2 = Conn(Opts("pg://test@localhost").tcp_nodelay(True).ssl_mode("require"))
+conn2 = Conn(Opts("pg://test@localhost").ssl_mode("require"))
 
 # Opts
 conn3 = Conn(

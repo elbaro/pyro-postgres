@@ -11,12 +11,12 @@ use crate::sync::handler::{DictHandler, TupleHandler};
 
 /// Python wrapper for an unnamed portal.
 ///
-/// This allows iterative row fetching within an `exec_iter` callback.
+/// This allows iterative row fetching within an `exec_portal` callback.
 /// The portal is only valid during the callback execution.
 #[pyclass(module = "pyro_postgres.sync", name = "UnnamedPortal", unsendable)]
 pub struct SyncUnnamedPortal {
     /// Raw pointer to the underlying portal.
-    /// SAFETY: This is only valid during the exec_iter callback.
+    /// SAFETY: This is only valid during the exec_portal callback.
     portal: NonNull<UnnamedPortal<'static>>,
 }
 
@@ -26,7 +26,7 @@ impl SyncUnnamedPortal {
     /// # Safety
     /// The caller must ensure that:
     /// - The portal reference remains valid for the lifetime of this wrapper
-    /// - The wrapper is not used after the exec_iter callback returns
+    /// - The wrapper is not used after the exec_portal callback returns
     pub unsafe fn new(portal: &mut UnnamedPortal<'_>) -> Self {
         // Cast away the lifetime - safe as long as we only use this within the callback
         let portal_ptr = portal as *mut UnnamedPortal<'_> as *mut UnnamedPortal<'static>;
@@ -53,7 +53,7 @@ impl SyncUnnamedPortal {
         max_rows: u32,
         as_dict: bool,
     ) -> PyroResult<(Py<PyList>, bool)> {
-        // SAFETY: This is only called during the exec_iter callback,
+        // SAFETY: This is only called during the exec_portal callback,
         // so the portal pointer is still valid.
         let portal = unsafe { self.portal.as_mut() };
 
