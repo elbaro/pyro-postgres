@@ -1,4 +1,4 @@
-//! Python wrapper for sync NamedPortal.
+//! Python wrapper for sync `NamedPortal`.
 
 use pyo3::prelude::*;
 use pyo3::types::PyList;
@@ -10,7 +10,7 @@ use crate::sync::handler::{DictHandler, TupleHandler};
 /// Python wrapper for a named portal.
 ///
 /// Named portals allow interleaving multiple row streams. Unlike unnamed portals
-/// (used in exec_iter), named portals can be executed multiple times and can
+/// (used in `exec_iter`), named portals can be executed multiple times and can
 /// coexist with other portals.
 ///
 /// Created by `Conn.exec_portal()`. Use `execute_collect()` to fetch rows,
@@ -41,8 +41,8 @@ impl SyncNamedPortal {
 impl SyncNamedPortal {
     /// Execute the portal and collect up to `max_rows` rows.
     ///
-    /// Returns a list of tuples (or dicts if as_dict=True).
-    /// Use max_rows=0 to fetch all remaining rows at once.
+    /// Returns a list of tuples (or dicts if `as_dict=True`).
+    /// Use `max_rows=0` to fetch all remaining rows at once.
     ///
     /// After this call, check `is_complete()` to see if more rows are available.
     #[pyo3(signature = (max_rows, *, as_dict=false))]

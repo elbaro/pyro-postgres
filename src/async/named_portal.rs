@@ -1,4 +1,4 @@
-//! Python wrapper for async NamedPortal.
+//! Python wrapper for async `NamedPortal`.
 
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList};
@@ -11,7 +11,7 @@ use crate::util::{PyroFuture, rust_future_into_py};
 /// Python wrapper for an async named portal.
 ///
 /// Named portals allow interleaving multiple row streams. Unlike unnamed portals
-/// (used in exec_iter), named portals can be executed multiple times and can
+/// (used in `exec_iter`), named portals can be executed multiple times and can
 /// coexist with other portals.
 ///
 /// Created by `Conn.exec_portal()`. Use `execute_collect()` to fetch rows,
@@ -42,11 +42,11 @@ impl AsyncNamedPortal {
 impl AsyncNamedPortal {
     /// Execute the portal and collect up to `max_rows` rows.
     ///
-    /// Returns a tuple of (rows, has_more) where:
-    /// - rows: list of tuples (or dicts if as_dict=True)
-    /// - has_more: True if more rows are available
+    /// Returns a tuple of `(rows, has_more)` where:
+    /// - rows: list of tuples (or dicts if `as_dict=True`)
+    /// - `has_more`: True if more rows are available
     ///
-    /// Use max_rows=0 to fetch all remaining rows at once.
+    /// Use `max_rows=0` to fetch all remaining rows at once.
     #[pyo3(signature = (max_rows, *, as_dict=false))]
     fn exec_collect(
         &mut self,

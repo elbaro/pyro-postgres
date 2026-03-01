@@ -18,7 +18,7 @@ pub struct PyJson {
 #[pymethods]
 impl PyJson {
     #[new]
-    fn new(data: Bound<'_, PyAny>) -> PyResult<Self> {
+    fn new(data: &Bound<'_, PyAny>) -> PyResult<Self> {
         let py = data.py();
         // If it's already a string, use it directly
         if data.is_instance_of::<pyo3::types::PyString>() {
@@ -49,7 +49,7 @@ pub struct PyJsonb {
 #[pymethods]
 impl PyJsonb {
     #[new]
-    fn new(data: Bound<'_, PyAny>) -> PyResult<Self> {
+    fn new(data: &Bound<'_, PyAny>) -> PyResult<Self> {
         let py = data.py();
         // If it's already a string, use it directly
         if data.is_instance_of::<pyo3::types::PyString>() {

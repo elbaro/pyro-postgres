@@ -43,7 +43,7 @@ struct PipelineState {
     guard: OwnedMutexGuard<Option<Conn>>,
     pipeline: Pipeline<'static>,
     /// Statements stored here to ensure they outlive their tickets.
-    /// The Ticket's `stmt` field references the inner PreparedStatement.
+    /// The Ticket's `stmt` field references the inner `PreparedStatement`.
     statements: Vec<Py<PreparedStatement>>,
 }
 
@@ -135,8 +135,8 @@ impl AsyncPipeline {
 
     /// Queue a statement execution.
     ///
-    /// Accepts either a SQL query string or a prepared PreparedStatement.
-    /// Returns a Ticket that must be claimed later using claim_one, claim_collect, or claim_drop.
+    /// Accepts either a SQL query string or a prepared `PreparedStatement`.
+    /// Returns a `Ticket` that must be claimed later using `claim_one`, `claim_collect`, or `claim_drop`.
     #[pyo3(signature = (query, params=Params::default()))]
     fn exec(
         &self,
@@ -180,7 +180,7 @@ impl AsyncPipeline {
 
     /// Send SYNC message to establish transaction boundary.
     ///
-    /// After calling sync(), you must claim all queued operations in order.
+    /// After calling `sync()`, you must claim all queued operations in order.
     fn sync(&self, py: Python<'_>) -> PyResult<Py<PyroFuture>> {
         let state_arc = self.state.clone();
 
@@ -324,7 +324,7 @@ impl AsyncPipeline {
         Ok(state.pipeline.is_aborted())
     }
 
-    /// Claim and collect all rows (alias for claim_collect).
+    /// Claim and collect all rows (alias for `claim_collect`).
     ///
     /// Results must be claimed in the same order they were queued.
     #[pyo3(signature = (ticket, *, as_dict=false))]

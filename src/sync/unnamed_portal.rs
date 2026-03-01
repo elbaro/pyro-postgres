@@ -16,7 +16,7 @@ use crate::sync::handler::{DictHandler, TupleHandler};
 #[pyclass(module = "pyro_postgres.sync", name = "UnnamedPortal", unsendable)]
 pub struct SyncUnnamedPortal {
     /// Raw pointer to the underlying portal.
-    /// SAFETY: This is only valid during the exec_portal callback.
+    /// SAFETY: This is only valid during the `exec_portal` callback.
     portal: NonNull<UnnamedPortal<'static>>,
 }
 
@@ -26,7 +26,7 @@ impl SyncUnnamedPortal {
     /// # Safety
     /// The caller must ensure that:
     /// - The portal reference remains valid for the lifetime of this wrapper
-    /// - The wrapper is not used after the exec_portal callback returns
+    /// - The wrapper is not used after the `exec_portal` callback returns
     pub unsafe fn new(portal: &mut UnnamedPortal<'_>) -> Self {
         // Cast away the lifetime - safe as long as we only use this within the callback
         let portal_ptr = portal as *mut UnnamedPortal<'_> as *mut UnnamedPortal<'static>;
@@ -43,7 +43,7 @@ impl SyncUnnamedPortal {
     ///
     /// Returns a tuple of `(rows, has_more)` where:
     /// - rows: list of tuples (or dicts if `as_dict=True`)
-    /// - has_more: True if more rows are available
+    /// - `has_more`: True if more rows are available
     ///
     /// Use `max_rows=0` to fetch all remaining rows at once.
     #[pyo3(signature = (max_rows, *, as_dict=false))]

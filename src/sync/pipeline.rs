@@ -113,8 +113,8 @@ impl SyncPipeline {
 
     /// Queue a statement execution.
     ///
-    /// Accepts either a SQL query string or a prepared PreparedStatement.
-    /// Returns a Ticket that must be claimed later using claim_one, claim_collect, or claim_drop.
+    /// Accepts either a SQL query string or a prepared `PreparedStatement`.
+    /// Returns a `Ticket` that must be claimed later using `claim_one`, `claim_collect`, or `claim_drop`.
     #[pyo3(signature = (query, params=Params::default()))]
     fn exec(
         &mut self,
@@ -149,7 +149,7 @@ impl SyncPipeline {
 
     /// Send SYNC message to establish transaction boundary.
     ///
-    /// After calling sync(), you must claim all queued operations in order.
+    /// After calling `sync()`, you must claim all queued operations in order.
     fn sync(&mut self) -> PyroResult<()> {
         let pipeline = self.pipeline.as_mut().ok_or(Error::IncorrectApiUsageError(
             "Pipeline not entered - use 'with conn.pipeline() as p:'",
@@ -250,7 +250,7 @@ impl SyncPipeline {
         Ok(pipeline.is_aborted())
     }
 
-    /// Claim and collect all rows (alias for claim_collect).
+    /// Claim and collect all rows (alias for `claim_collect`).
     ///
     /// Results must be claimed in the same order they were queued.
     #[pyo3(signature = (ticket, *, as_dict=false))]

@@ -127,7 +127,7 @@ impl SyncTransaction {
     /// Create a named portal for iterative row fetching.
     ///
     /// Named portals allow interleaving multiple row streams. Unlike unnamed portals
-    /// (used in exec_iter), named portals can be executed multiple times and can
+    /// (used in `exec_iter`), named portals can be executed multiple times and can
     /// coexist with other portals.
     ///
     /// Named portals must be created within an explicit transaction because SYNC

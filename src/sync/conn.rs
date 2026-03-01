@@ -352,7 +352,7 @@ impl SyncConn {
 
     /// Prepare a statement for later execution.
     ///
-    /// Returns a PreparedStatement that can be used with exec methods:
+    /// Returns a `PreparedStatement` that can be used with exec methods:
     ///
     /// ```python
     /// stmt = conn.prepare("SELECT * FROM users WHERE id = $1")
