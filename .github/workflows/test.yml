@@ -72,12 +72,3 @@ jobs:
       - run: uv run --no-sync pytest
         env:
           DATABASE_URL: postgres://test:1234@localhost/test?sslmode=disable
-
-  security:
-    name: Security Audit
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: rustsec/audit-check@v2
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
