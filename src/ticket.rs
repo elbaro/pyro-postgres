@@ -14,10 +14,10 @@ pub struct PyTicket {
 }
 
 impl PyTicket {
-    /// Create a new PyTicket from a Ticket.
+    /// Create a new `PyTicket` from a Ticket.
     ///
     /// # Safety
-    /// The caller must ensure that the PreparedStatement referenced by the Ticket
+    /// The caller must ensure that the `PreparedStatement` referenced by the `Ticket`
     /// (if any) is kept alive for the ticket's lifetime (e.g., stored in Pipeline state).
     pub unsafe fn new(ticket: Ticket<'_>) -> Self {
         Self {

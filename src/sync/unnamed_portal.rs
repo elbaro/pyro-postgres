@@ -1,4 +1,4 @@
-//! Python wrapper for sync UnnamedPortal.
+//! Python wrapper for sync `UnnamedPortal`.
 
 use std::ptr::NonNull;
 
@@ -41,11 +41,11 @@ impl SyncUnnamedPortal {
 impl SyncUnnamedPortal {
     /// Fetch up to `max_rows` rows from the portal.
     ///
-    /// Returns a tuple of (rows, has_more) where:
-    /// - rows: list of tuples (or dicts if as_dict=True)
+    /// Returns a tuple of `(rows, has_more)` where:
+    /// - rows: list of tuples (or dicts if `as_dict=True`)
     /// - has_more: True if more rows are available
     ///
-    /// Use max_rows=0 to fetch all remaining rows at once.
+    /// Use `max_rows=0` to fetch all remaining rows at once.
     #[pyo3(signature = (max_rows, *, as_dict=false))]
     fn fetch(
         &mut self,

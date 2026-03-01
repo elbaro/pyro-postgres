@@ -40,8 +40,7 @@ fn natural_oid(value: &Value) -> Oid {
     match value {
         Value::NULL => 0, // Unknown/NULL
         Value::Bool(_) => oid::BOOL,
-        Value::Int(_) => oid::INT8,
-        Value::UInt(_) => oid::INT8,
+        Value::Int(_) | Value::UInt(_) => oid::INT8,
         Value::Float(_) => oid::FLOAT4,
         Value::Double(_) => oid::FLOAT8,
         Value::Str(_) => oid::TEXT,
@@ -142,7 +141,7 @@ fn encode_bool(v: bool, target_oid: Oid, buf: &mut Vec<u8>) -> zero_postgres::Re
     match target_oid {
         oid::BOOL | 0 => {
             buf.extend_from_slice(&1_i32.to_be_bytes());
-            buf.push(if v { 1 } else { 0 });
+            buf.push(u8::from(v));
         }
         oid::INT2 => {
             buf.extend_from_slice(&2_i32.to_be_bytes());
