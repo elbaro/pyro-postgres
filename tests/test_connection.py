@@ -5,7 +5,6 @@ from pyro_postgres.sync import Conn
 
 from .conftest import get_async_conn, get_test_db_url
 
-
 # ─── Sync Connection Tests ───────────────────────────────────────────────────
 
 

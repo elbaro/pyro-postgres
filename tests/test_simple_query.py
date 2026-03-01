@@ -13,7 +13,6 @@ from .conftest import (
     setup_test_table_sync,
 )
 
-
 # ─── Sync Simple Query Tests ─────────────────────────────────────────────────
 
 
