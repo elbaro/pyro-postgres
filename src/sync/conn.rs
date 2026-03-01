@@ -85,12 +85,12 @@ impl SyncConn {
 
         if as_dict {
             let mut handler = DictHandler::new(py);
-            conn.query(&query, &mut handler)?;
+            conn.query(query, &mut handler)?;
             let rows = handler.into_rows();
             Ok(rows.bind(py).iter().map(pyo3::Bound::unbind).collect())
         } else {
             let mut handler = TupleHandler::new(py);
-            conn.query(&query, &mut handler)?;
+            conn.query(query, &mut handler)?;
             let rows = handler.into_rows();
             Ok(rows.bind(py).iter().map(pyo3::Bound::unbind).collect())
         }
@@ -108,7 +108,7 @@ impl SyncConn {
 
         if as_dict {
             let mut handler = DictHandler::new(py);
-            conn.query(&query, &mut handler)?;
+            conn.query(query, &mut handler)?;
             let rows = handler.into_rows();
             Ok(if rows.bind(py).len() > 0 {
                 Some(rows.bind(py).get_item(0)?.unbind())
@@ -117,7 +117,7 @@ impl SyncConn {
             })
         } else {
             let mut handler = TupleHandler::new(py);
-            conn.query(&query, &mut handler)?;
+            conn.query(query, &mut handler)?;
             let rows = handler.into_rows();
             Ok(if rows.bind(py).len() > 0 {
                 Some(rows.bind(py).get_item(0)?.unbind())

@@ -1,5 +1,7 @@
 //! Python wrapper for async `NamedPortal`.
 
+use std::sync::Arc;
+
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList};
 
@@ -55,7 +57,7 @@ impl AsyncNamedPortal {
         as_dict: bool,
     ) -> PyResult<Py<PyroFuture>> {
         let name = self.name.clone();
-        let inner = self.conn.bind(py).borrow().inner.clone();
+        let inner = Arc::clone(&self.conn.bind(py).borrow().inner);
 
         rust_future_into_py::<_, (Py<PyList>, bool)>(py, async move {
             let mut guard = inner.lock().await;
@@ -102,7 +104,7 @@ impl AsyncNamedPortal {
     /// also be closed when the transaction ends.
     fn close(&mut self, py: Python<'_>) -> PyResult<Py<PyroFuture>> {
         let name = self.name.clone();
-        let inner = self.conn.bind(py).borrow().inner.clone();
+        let inner = Arc::clone(&self.conn.bind(py).borrow().inner);
 
         rust_future_into_py::<_, ()>(py, async move {
             let mut guard = inner.lock().await;

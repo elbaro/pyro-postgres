@@ -62,7 +62,7 @@ impl AsyncPipeline {
     fn __aenter__(slf: Py<Self>, py: Python<'_>) -> PyResult<Py<PyroFuture>> {
         let slf_clone = slf.clone_ref(py);
         let conn = slf.borrow(py).conn.clone_ref(py);
-        let state_arc = slf.borrow(py).state.clone();
+        let state_arc = Arc::clone(&slf.borrow(py).state);
 
         // Check if already entered
         let already_entered = slf
@@ -74,7 +74,7 @@ impl AsyncPipeline {
         }
 
         rust_future_into_py(py, async move {
-            let conn_ref = Python::attach(|py| conn.bind(py).borrow().inner.clone());
+            let conn_ref = Python::attach(|py| Arc::clone(&conn.bind(py).borrow().inner));
 
             // Acquire the owned mutex guard - this can be moved across tasks
             let mut guard = conn_ref.lock_owned().await;
@@ -115,7 +115,7 @@ impl AsyncPipeline {
         _exc_val: Option<&Bound<'_, PyAny>>,
         _exc_tb: Option<&Bound<'_, PyAny>>,
     ) -> PyResult<Py<PyroFuture>> {
-        let state_arc = self.state.clone();
+        let state_arc = Arc::clone(&self.state);
         let entered = &self.entered;
         entered.store(false, std::sync::atomic::Ordering::SeqCst);
 
@@ -182,7 +182,7 @@ impl AsyncPipeline {
     ///
     /// After calling `sync()`, you must claim all queued operations in order.
     fn sync(&self, py: Python<'_>) -> PyResult<Py<PyroFuture>> {
-        let state_arc = self.state.clone();
+        let state_arc = Arc::clone(&self.state);
 
         rust_future_into_py::<_, ()>(py, async move {
             // Take ownership of the state for the async operation
@@ -217,7 +217,7 @@ impl AsyncPipeline {
         ticket: PyTicket,
         as_dict: bool,
     ) -> PyResult<Py<PyroFuture>> {
-        let state_arc = self.state.clone();
+        let state_arc = Arc::clone(&self.state);
 
         rust_future_into_py::<_, Option<Py<PyAny>>>(py, async move {
             let mut state_opt = { state_arc.lock().take() };
@@ -256,7 +256,7 @@ impl AsyncPipeline {
         ticket: PyTicket,
         as_dict: bool,
     ) -> PyResult<Py<PyroFuture>> {
-        let state_arc = self.state.clone();
+        let state_arc = Arc::clone(&self.state);
 
         rust_future_into_py::<_, Vec<Py<PyAny>>>(py, async move {
             let mut state_opt = { state_arc.lock().take() };
@@ -289,7 +289,7 @@ impl AsyncPipeline {
     ///
     /// Results must be claimed in the same order they were queued.
     fn claim_drop(&self, py: Python<'_>, ticket: PyTicket) -> PyResult<Py<PyroFuture>> {
-        let state_arc = self.state.clone();
+        let state_arc = Arc::clone(&self.state);
 
         rust_future_into_py::<_, ()>(py, async move {
             let mut state_opt = { state_arc.lock().take() };

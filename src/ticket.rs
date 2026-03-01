@@ -21,7 +21,7 @@ impl PyTicket {
     /// (if any) is kept alive for the ticket's lifetime (e.g., stored in Pipeline state).
     pub unsafe fn new(ticket: Ticket<'_>) -> Self {
         Self {
-            inner: unsafe { std::mem::transmute(ticket) },
+            inner: unsafe { std::mem::transmute::<Ticket<'_>, Ticket<'_>>(ticket) },
         }
     }
 }

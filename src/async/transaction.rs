@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use pyo3::prelude::*;
@@ -56,7 +57,7 @@ impl AsyncTransaction {
         rust_future_into_py(py, async move {
             let conn_inner = Python::attach(|py| {
                 let conn_ref = conn.bind(py).borrow();
-                conn_ref.inner.clone()
+                Arc::clone(&conn_ref.inner)
             });
 
             // Build BEGIN command
@@ -109,7 +110,7 @@ impl AsyncTransaction {
         rust_future_into_py(py, async move {
             let conn_inner = Python::attach(|py| {
                 let conn_ref = conn.bind(py).borrow();
-                conn_ref.inner.clone()
+                Arc::clone(&conn_ref.inner)
             });
 
             let sql = if had_exception { "ROLLBACK" } else { "COMMIT" };
@@ -143,7 +144,7 @@ impl AsyncTransaction {
         rust_future_into_py(py, async move {
             let conn_inner = Python::attach(|py| {
                 let conn_ref = conn.bind(py).borrow();
-                conn_ref.inner.clone()
+                Arc::clone(&conn_ref.inner)
             });
 
             let mut guard = conn_inner.lock().await;
@@ -175,7 +176,7 @@ impl AsyncTransaction {
         rust_future_into_py(py, async move {
             let conn_inner = Python::attach(|py| {
                 let conn_ref = conn.bind(py).borrow();
-                conn_ref.inner.clone()
+                Arc::clone(&conn_ref.inner)
             });
 
             let mut guard = conn_inner.lock().await;
@@ -239,7 +240,7 @@ impl AsyncTransaction {
         rust_future_into_py(py, async move {
             let conn_inner = Python::attach(|py| {
                 let conn_ref = conn.bind(py).borrow();
-                conn_ref.inner.clone()
+                Arc::clone(&conn_ref.inner)
             });
 
             let mut guard = conn_inner.lock().await;

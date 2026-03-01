@@ -85,7 +85,7 @@ impl AsyncConn {
     }
 
     fn id(&self, py: Python<'_>) -> PyResult<Py<PyroFuture>> {
-        let inner = self.inner.clone();
+        let inner = Arc::clone(&self.inner);
         rust_future_into_py(py, async move {
             let guard = inner.lock().await;
             let conn = guard.as_ref().ok_or(Error::ConnectionClosedError)?;
@@ -94,7 +94,7 @@ impl AsyncConn {
     }
 
     fn close(&self, py: Python<'_>) -> PyResult<Py<PyroFuture>> {
-        let inner = self.inner.clone();
+        let inner = Arc::clone(&self.inner);
         rust_future_into_py(py, async move {
             let mut guard = inner.lock().await;
             *guard = None;
@@ -103,7 +103,7 @@ impl AsyncConn {
     }
 
     fn server_version(&self, py: Python<'_>) -> PyResult<Py<PyroFuture>> {
-        let inner = self.inner.clone();
+        let inner = Arc::clone(&self.inner);
         rust_future_into_py(py, async move {
             let guard = inner.lock().await;
             let conn = guard.as_ref().ok_or(Error::ConnectionClosedError)?;
@@ -117,7 +117,7 @@ impl AsyncConn {
     }
 
     fn ping(&self, py: Python<'_>) -> PyResult<Py<PyroFuture>> {
-        let inner = self.inner.clone();
+        let inner = Arc::clone(&self.inner);
         rust_future_into_py(py, async move {
             let mut guard = inner.lock().await;
             let conn = guard.as_mut().ok_or(Error::ConnectionClosedError)?;
@@ -130,9 +130,9 @@ impl AsyncConn {
 
     #[pyo3(signature = (query, *, as_dict=false))]
     fn query(&self, py: Python<'_>, query: String, as_dict: bool) -> PyResult<Py<PyroFuture>> {
-        let inner = self.inner.clone();
-        let tuple_handler = self.tuple_handler.clone();
-        let dict_handler = self.dict_handler.clone();
+        let inner = Arc::clone(&self.inner);
+        let tuple_handler = Arc::clone(&self.tuple_handler);
+        let dict_handler = Arc::clone(&self.dict_handler);
 
         rust_future_into_py::<_, Vec<Py<PyAny>>>(py, async move {
             let mut guard = inner.lock().await;
@@ -165,9 +165,9 @@ impl AsyncConn {
         query: String,
         as_dict: bool,
     ) -> PyResult<Py<PyroFuture>> {
-        let inner = self.inner.clone();
-        let tuple_handler = self.tuple_handler.clone();
-        let dict_handler = self.dict_handler.clone();
+        let inner = Arc::clone(&self.inner);
+        let tuple_handler = Arc::clone(&self.tuple_handler);
+        let dict_handler = Arc::clone(&self.dict_handler);
 
         rust_future_into_py::<_, Option<Py<PyAny>>>(py, async move {
             let mut guard = inner.lock().await;
@@ -194,7 +194,7 @@ impl AsyncConn {
     }
 
     fn query_drop(&self, py: Python<'_>, query: String) -> PyResult<Py<PyroFuture>> {
-        let inner = self.inner.clone();
+        let inner = Arc::clone(&self.inner);
 
         rust_future_into_py::<_, u64>(py, async move {
             let mut guard = inner.lock().await;
@@ -224,9 +224,9 @@ impl AsyncConn {
             StatementInput::Query(stmt.extract::<String>()?)
         };
 
-        let inner = self.inner.clone();
-        let tuple_handler = self.tuple_handler.clone();
-        let dict_handler = self.dict_handler.clone();
+        let inner = Arc::clone(&self.inner);
+        let tuple_handler = Arc::clone(&self.tuple_handler);
+        let dict_handler = Arc::clone(&self.dict_handler);
 
         rust_future_into_py::<_, Vec<Py<PyAny>>>(py, async move {
             let mut guard = inner.lock().await;
@@ -273,9 +273,9 @@ impl AsyncConn {
             StatementInput::Query(stmt.extract::<String>()?)
         };
 
-        let inner = self.inner.clone();
-        let tuple_handler = self.tuple_handler.clone();
-        let dict_handler = self.dict_handler.clone();
+        let inner = Arc::clone(&self.inner);
+        let tuple_handler = Arc::clone(&self.tuple_handler);
+        let dict_handler = Arc::clone(&self.dict_handler);
 
         rust_future_into_py::<_, Option<Py<PyAny>>>(py, async move {
             let mut guard = inner.lock().await;
@@ -321,7 +321,7 @@ impl AsyncConn {
             StatementInput::Query(stmt.extract::<String>()?)
         };
 
-        let inner = self.inner.clone();
+        let inner = Arc::clone(&self.inner);
 
         rust_future_into_py::<_, u64>(py, async move {
             let mut guard = inner.lock().await;
@@ -362,7 +362,7 @@ impl AsyncConn {
             StatementInput::Query(stmt.extract::<String>()?)
         };
 
-        let inner = self.inner.clone();
+        let inner = Arc::clone(&self.inner);
 
         rust_future_into_py::<_, Option<Py<PyAny>>>(py, async move {
             let mut guard = inner.lock().await;
@@ -414,7 +414,7 @@ impl AsyncConn {
             StatementInput::Query(stmt.extract::<String>()?)
         };
 
-        let inner = self.inner.clone();
+        let inner = Arc::clone(&self.inner);
 
         rust_future_into_py::<_, Py<PyAny>>(py, async move {
             let mut guard = inner.lock().await;
@@ -517,7 +517,7 @@ impl AsyncConn {
     /// ```
     fn prepare(&self, py: Python<'_>, query: PyBackedStr) -> PyResult<Py<PyroFuture>> {
         let query_string = query.to_string();
-        let inner = self.inner.clone();
+        let inner = Arc::clone(&self.inner);
 
         rust_future_into_py(py, async move {
             let mut guard = inner.lock().await;
@@ -536,7 +536,7 @@ impl AsyncConn {
     /// ])
     /// ```
     fn prepare_batch(&self, py: Python<'_>, sqls: Vec<PyBackedStr>) -> PyResult<Py<PyroFuture>> {
-        let inner = self.inner.clone();
+        let inner = Arc::clone(&self.inner);
 
         rust_future_into_py(py, async move {
             let mut guard = inner.lock().await;

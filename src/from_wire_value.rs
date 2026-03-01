@@ -1,5 +1,7 @@
 //! Convert `PostgreSQL` wire format values to Python objects.
 
+use std::fmt::Write;
+
 use pyo3::IntoPyObjectExt;
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyString};
@@ -299,7 +301,10 @@ pub fn decode_binary_to_python(py: Python<'_>, oid: u32, bytes: &[u8]) -> PyResu
             }
             let uuid_class = get_uuid_class(py)?;
             // Build hex string and use the proper constructor
-            let hex_str = bytes.iter().map(|b| format!("{b:02x}")).collect::<String>();
+            let hex_str = bytes.iter().fold(String::with_capacity(32), |mut s, b| {
+                let _ = write!(s, "{b:02x}");
+                s
+            });
             let uuid = uuid_class.call1((hex_str,))?;
             uuid.into_py_any(py)
         }
@@ -461,7 +466,7 @@ fn parse_interval(s: &str) -> PyResult<(i32, i32, i32)> {
 fn days_since_pg_epoch_to_ymd(days: i32) -> (i32, u32, u32) {
     let julian_day = PG_EPOCH.to_julian_day() + days;
     let date = Date::from_julian_day(julian_day).unwrap_or(PG_EPOCH);
-    (date.year(), date.month() as u32, date.day() as u32)
+    (date.year(), date.month() as u32, u32::from(date.day()))
 }
 
 /// Convert microseconds since midnight to (hour, minute, second, microsecond)
@@ -531,7 +536,7 @@ fn decode_numeric_binary(bytes: &[u8]) -> PyResult<String> {
             if i == 0 {
                 result.push_str(&d.to_string());
             } else {
-                result.push_str(&format!("{d:04}"));
+                let _ = write!(result, "{d:04}");
             }
         }
     } else {
@@ -544,7 +549,7 @@ fn decode_numeric_binary(bytes: &[u8]) -> PyResult<String> {
         let frac_start = int_ndigits;
         let mut frac_digits = String::new();
         for i in frac_start..digits.len() {
-            frac_digits.push_str(&format!("{:04}", digits[i]));
+            let _ = write!(frac_digits, "{:04}", digits[i]);
         }
         // Pad with zeros if needed
         while frac_digits.len() < dscale {

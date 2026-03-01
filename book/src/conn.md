@@ -45,7 +45,7 @@ conn3 = Conn(
 ### Example: async
 
 ```py
-from pyro_postgres.async import Conn, Opts
+from pyro_postgres.async_ import Conn, Opts
 
 conn = await Conn.new("pg://test:1234@localhost:5432/test_db")
 ```
