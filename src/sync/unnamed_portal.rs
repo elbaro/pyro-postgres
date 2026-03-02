@@ -29,6 +29,8 @@ impl SyncUnnamedPortal {
     /// - The wrapper is not used after the `exec_portal` callback returns
     pub unsafe fn new(portal: &mut UnnamedPortal<'_>) -> Self {
         // Cast away the lifetime - safe as long as we only use this within the callback
+        // first cast converts &mut to *mut, second transmutes lifetime
+        #[expect(clippy::unnecessary_cast)]
         let portal_ptr = portal as *mut UnnamedPortal<'_> as *mut UnnamedPortal<'static>;
         // SAFETY: portal_ptr is derived from a valid mutable reference, so it's non-null
         Self {

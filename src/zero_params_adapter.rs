@@ -350,10 +350,7 @@ fn encode_decimal(s: &str, target_oid: Oid, buf: &mut Vec<u8>) -> zero_postgres:
 }
 
 /// PostgreSQL epoch (2000-01-01)
-const PG_EPOCH: Date = match Date::from_calendar_date(2000, Month::January, 1) {
-    Ok(d) => d,
-    Err(_) => unreachable!(),
-};
+const PG_EPOCH: Date = Date::from_calendar_date(2000, Month::January, 1).unwrap();
 
 /// Convert (year, month, day) to days since `PostgreSQL` epoch (2000-01-01)
 fn days_since_pg_epoch(year: i32, month: u8, day: u8) -> zero_postgres::Result<i32> {

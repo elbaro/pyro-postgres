@@ -13,10 +13,7 @@ use crate::py_imports::{
 };
 
 /// PostgreSQL epoch (2000-01-01)
-const PG_EPOCH: Date = match Date::from_calendar_date(2000, Month::January, 1) {
-    Ok(d) => d,
-    Err(_) => unreachable!(),
-};
+const PG_EPOCH: Date = Date::from_calendar_date(2000, Month::January, 1).unwrap();
 
 // PostgreSQL OIDs for common types
 pub const OID_BOOL: u32 = 16;
@@ -548,8 +545,8 @@ fn decode_numeric_binary(bytes: &[u8]) -> PyResult<String> {
         result.push('.');
         let frac_start = int_ndigits;
         let mut frac_digits = String::new();
-        for i in frac_start..digits.len() {
-            let _ = write!(frac_digits, "{:04}", digits[i]);
+        for digit in &digits[frac_start..] {
+            let _ = write!(frac_digits, "{:04}", digit);
         }
         // Pad with zeros if needed
         while frac_digits.len() < dscale {
