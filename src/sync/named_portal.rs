@@ -19,22 +19,11 @@ use crate::sync::handler::{DictHandler, TupleHandler};
 #[pyclass(module = "pyro_postgres.sync", name = "NamedPortal")]
 pub struct SyncNamedPortal {
     /// The portal name on the server
-    name: String,
+    pub(crate) name: String,
     /// Whether all rows have been fetched
-    complete: bool,
+    pub(crate) complete: bool,
     /// Reference to the connection
-    conn: Py<SyncConn>,
-}
-
-impl SyncNamedPortal {
-    /// Create a new named portal wrapper.
-    pub fn new(name: String, conn: Py<SyncConn>) -> Self {
-        Self {
-            name,
-            complete: false,
-            conn,
-        }
-    }
+    pub(crate) conn: Py<SyncConn>,
 }
 
 #[pymethods]

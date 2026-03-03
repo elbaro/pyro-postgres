@@ -25,14 +25,7 @@ pub struct FetchRequest {
 #[pyclass(module = "pyro_postgres.async_", name = "UnnamedPortal", unsendable)]
 pub struct AsyncUnnamedPortal {
     /// Channel to send fetch requests to the async runtime
-    request_tx: mpsc::Sender<FetchRequest>,
-}
-
-impl AsyncUnnamedPortal {
-    /// Create a new wrapper with a request channel.
-    pub fn new(request_tx: mpsc::Sender<FetchRequest>) -> Self {
-        Self { request_tx }
-    }
+    pub(crate) request_tx: mpsc::Sender<FetchRequest>,
 }
 
 #[pymethods]
@@ -63,13 +56,13 @@ impl AsyncUnnamedPortal {
 
         self.request_tx
             .send(request)
-            .map_err(|_| crate::error::Error::ConnectionClosedError)?;
+            .map_err(|_unhelpful_err| crate::error::Error::ConnectionClosedError)?;
 
         // Release the GIL and wait for the response
         py.detach(|| {
             response_rx
                 .blocking_recv()
-                .map_err(|_| crate::error::Error::ConnectionClosedError)?
+                .map_err(|_unhelpful_err| crate::error::Error::ConnectionClosedError)?
         })
     }
 }

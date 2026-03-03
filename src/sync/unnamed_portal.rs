@@ -17,26 +17,7 @@ use crate::sync::handler::{DictHandler, TupleHandler};
 pub struct SyncUnnamedPortal {
     /// Raw pointer to the underlying portal.
     /// SAFETY: This is only valid during the `exec_portal` callback.
-    portal: NonNull<UnnamedPortal<'static>>,
-}
-
-impl SyncUnnamedPortal {
-    /// Create a new wrapper from a mutable reference to a portal.
-    ///
-    /// # Safety
-    /// The caller must ensure that:
-    /// - The portal reference remains valid for the lifetime of this wrapper
-    /// - The wrapper is not used after the `exec_portal` callback returns
-    pub unsafe fn new(portal: &mut UnnamedPortal<'_>) -> Self {
-        // Cast away the lifetime - safe as long as we only use this within the callback
-        // first cast converts &mut to *mut, second transmutes lifetime
-        #[expect(clippy::unnecessary_cast)]
-        let portal_ptr = portal as *mut UnnamedPortal<'_> as *mut UnnamedPortal<'static>;
-        // SAFETY: portal_ptr is derived from a valid mutable reference, so it's non-null
-        Self {
-            portal: unsafe { NonNull::new_unchecked(portal_ptr) },
-        }
-    }
+    pub(crate) portal: NonNull<UnnamedPortal<'static>>,
 }
 
 #[pymethods]
@@ -61,11 +42,11 @@ impl SyncUnnamedPortal {
 
         if as_dict {
             let mut handler = DictHandler::new(py);
-            let has_more = portal.fetch(max_rows, &mut handler)?;
+            let has_more = portal.exec(max_rows, &mut handler)?;
             Ok((handler.into_rows(), has_more))
         } else {
             let mut handler = TupleHandler::new(py);
-            let has_more = portal.fetch(max_rows, &mut handler)?;
+            let has_more = portal.exec(max_rows, &mut handler)?;
             Ok((handler.into_rows(), has_more))
         }
     }

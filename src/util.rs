@@ -68,38 +68,29 @@ where
         crate::tokio_thread::get_tokio_thread().spawn(async move {
             let result = fut.await;
 
-            Python::attach(|py| {
-                let bound_future = py_future.bind(py);
+            let _ = Python::attach(|py1| -> PyResult<()> {
+                let bound_future = py_future.bind(py1);
                 match result {
                     Ok(value) => {
-                        call_soon_threadsafe
-                            .call1(
-                                py,
-                                (
-                                    bound_future
-                                        .getattr(intern!(py, "set_result"))
-                                        .expect("set_result"),
-                                    value.into_py_any(py).expect("into_py_any"),
-                                ),
-                            )
-                            .expect("call_soon_threadsafe");
+                        call_soon_threadsafe.call1(
+                            py1,
+                            (
+                                bound_future.getattr(intern!(py1, "set_result"))?,
+                                value.into_py_any(py1)?,
+                            ),
+                        )?;
                     }
                     Err(err) => {
-                        call_soon_threadsafe
-                            .call1(
-                                py,
-                                (
-                                    bound_future
-                                        .getattr(intern!(py, "set_exception"))
-                                        .expect("set_exception"),
-                                    pyo3::PyErr::from(err)
-                                        .into_bound_py_any(py)
-                                        .expect("into_bound_py_any"),
-                                ),
-                            )
-                            .expect("call_soon_threadsafe");
+                        call_soon_threadsafe.call1(
+                            py1,
+                            (
+                                bound_future.getattr(intern!(py1, "set_exception"))?,
+                                pyo3::PyErr::from(err).into_bound_py_any(py1)?,
+                            ),
+                        )?;
                     }
                 }
+                Ok(())
             });
         });
     }
@@ -113,17 +104,23 @@ pub struct PyTupleBuilder {
 
 impl PyTupleBuilder {
     pub fn new(_py: Python, len: usize) -> Self {
+        // SAFETY: len is a valid tuple size; Python GIL is held via `_py`.
         let ptr = unsafe { pyo3::ffi::PyTuple_New(len as isize) };
         Self { ptr }
     }
 
     pub fn set(&self, index: usize, value: Bound<'_, PyAny>) {
+        // SAFETY: index is within bounds (caller contract); ptr is a valid PyTuple;
+        // into_ptr() steals the reference, which PyTuple_SetItem expects.
         unsafe {
             pyo3::ffi::PyTuple_SetItem(self.ptr, index as pyo3::ffi::Py_ssize_t, value.into_ptr());
         }
     }
 
     pub fn build(self, py: Python<'_>) -> Bound<'_, PyTuple> {
-        unsafe { Bound::from_owned_ptr(py, self.ptr).cast_into_unchecked() }
+        // SAFETY: self.ptr is a valid PyTuple created by PyTuple_New; we own it.
+        let obj = unsafe { Bound::from_owned_ptr(py, self.ptr) };
+        // SAFETY: PyTuple_New always returns a PyTuple.
+        unsafe { obj.cast_into_unchecked() }
     }
 }

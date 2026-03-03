@@ -26,6 +26,10 @@ pub struct TokioThread {
 
 impl TokioThread {
     /// Creates a new `TokioThread` with a dedicated OS thread running a Tokio runtime.
+    #[expect(
+        clippy::expect_used,
+        reason = "initialization-time panics; used with OnceLock::get_or_init which requires -> Self"
+    )]
     pub fn new() -> Self {
         let (handle_tx, handle_rx) = std::sync::mpsc::channel::<Arc<Handle>>();
         let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();

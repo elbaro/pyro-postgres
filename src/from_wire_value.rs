@@ -5,7 +5,7 @@ use std::fmt::Write;
 use pyo3::IntoPyObjectExt;
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyString};
-use time::{Date, Month};
+use time::Date;
 
 use crate::py_imports::{
     get_date_class, get_datetime_class, get_decimal_class, get_time_class, get_timedelta_class,
@@ -13,7 +13,7 @@ use crate::py_imports::{
 };
 
 /// PostgreSQL epoch (2000-01-01)
-const PG_EPOCH: Date = Date::from_calendar_date(2000, Month::January, 1).unwrap();
+const PG_EPOCH: Date = time::macros::datetime!(2000-01-01 00:00:00).date();
 
 // PostgreSQL OIDs for common types
 pub const OID_BOOL: u32 = 16;
@@ -169,31 +169,31 @@ pub fn decode_binary_to_python(py: Python<'_>, oid: u32, bytes: &[u8]) -> PyResu
         }
 
         OID_INT2 => {
-            let arr: [u8; 2] = bytes
-                .try_into()
-                .map_err(|_| pyo3::exceptions::PyValueError::new_err("Invalid INT2 binary data"))?;
+            let arr: [u8; 2] = bytes.try_into().map_err(|_unhelpful_err| {
+                pyo3::exceptions::PyValueError::new_err("Invalid INT2 binary data")
+            })?;
             let v = i16::from_be_bytes(arr);
             v.into_py_any(py)
         }
 
         OID_INT4 | OID_OID => {
-            let arr: [u8; 4] = bytes
-                .try_into()
-                .map_err(|_| pyo3::exceptions::PyValueError::new_err("Invalid INT4 binary data"))?;
+            let arr: [u8; 4] = bytes.try_into().map_err(|_unhelpful_err| {
+                pyo3::exceptions::PyValueError::new_err("Invalid INT4 binary data")
+            })?;
             let v = i32::from_be_bytes(arr);
             v.into_py_any(py)
         }
 
         OID_INT8 => {
-            let arr: [u8; 8] = bytes
-                .try_into()
-                .map_err(|_| pyo3::exceptions::PyValueError::new_err("Invalid INT8 binary data"))?;
+            let arr: [u8; 8] = bytes.try_into().map_err(|_unhelpful_err| {
+                pyo3::exceptions::PyValueError::new_err("Invalid INT8 binary data")
+            })?;
             let v = i64::from_be_bytes(arr);
             v.into_py_any(py)
         }
 
         OID_FLOAT4 => {
-            let arr: [u8; 4] = bytes.try_into().map_err(|_| {
+            let arr: [u8; 4] = bytes.try_into().map_err(|_unhelpful_err| {
                 pyo3::exceptions::PyValueError::new_err("Invalid FLOAT4 binary data")
             })?;
             let v = f32::from_be_bytes(arr);
@@ -210,7 +210,7 @@ pub fn decode_binary_to_python(py: Python<'_>, oid: u32, bytes: &[u8]) -> PyResu
         }
 
         OID_FLOAT8 => {
-            let arr: [u8; 8] = bytes.try_into().map_err(|_| {
+            let arr: [u8; 8] = bytes.try_into().map_err(|_unhelpful_err| {
                 pyo3::exceptions::PyValueError::new_err("Invalid FLOAT8 binary data")
             })?;
             let v = f64::from_be_bytes(arr);
@@ -227,9 +227,9 @@ pub fn decode_binary_to_python(py: Python<'_>, oid: u32, bytes: &[u8]) -> PyResu
 
         OID_DATE => {
             // PostgreSQL binary date: i32 days since 2000-01-01
-            let arr: [u8; 4] = bytes
-                .try_into()
-                .map_err(|_| pyo3::exceptions::PyValueError::new_err("Invalid DATE binary data"))?;
+            let arr: [u8; 4] = bytes.try_into().map_err(|_unhelpful_err| {
+                pyo3::exceptions::PyValueError::new_err("Invalid DATE binary data")
+            })?;
             let days = i32::from_be_bytes(arr);
             let date_class = get_date_class(py)?;
             // PostgreSQL epoch is 2000-01-01
@@ -240,9 +240,9 @@ pub fn decode_binary_to_python(py: Python<'_>, oid: u32, bytes: &[u8]) -> PyResu
 
         OID_TIME => {
             // PostgreSQL binary time: i64 microseconds since midnight
-            let arr: [u8; 8] = bytes
-                .try_into()
-                .map_err(|_| pyo3::exceptions::PyValueError::new_err("Invalid TIME binary data"))?;
+            let arr: [u8; 8] = bytes.try_into().map_err(|_unhelpful_err| {
+                pyo3::exceptions::PyValueError::new_err("Invalid TIME binary data")
+            })?;
             let micros = i64::from_be_bytes(arr);
             let time_class = get_time_class(py)?;
             let (hour, minute, second, micro) = micros_to_time(micros);
@@ -252,7 +252,7 @@ pub fn decode_binary_to_python(py: Python<'_>, oid: u32, bytes: &[u8]) -> PyResu
 
         OID_TIMESTAMP | OID_TIMESTAMPTZ => {
             // PostgreSQL binary timestamp: i64 microseconds since 2000-01-01 00:00:00
-            let arr: [u8; 8] = bytes.try_into().map_err(|_| {
+            let arr: [u8; 8] = bytes.try_into().map_err(|_unhelpful_err| {
                 pyo3::exceptions::PyValueError::new_err("Invalid TIMESTAMP binary data")
             })?;
             let micros = i64::from_be_bytes(arr);
@@ -265,14 +265,18 @@ pub fn decode_binary_to_python(py: Python<'_>, oid: u32, bytes: &[u8]) -> PyResu
 
         OID_INTERVAL => {
             // PostgreSQL binary interval: 8 bytes microseconds + 4 bytes days + 4 bytes months
-            if bytes.len() != 16 {
-                return Err(pyo3::exceptions::PyValueError::new_err(
-                    "Invalid INTERVAL binary data",
-                ));
-            }
-            let micros = i64::from_be_bytes(bytes[0..8].try_into().expect("8 bytes"));
-            let days = i32::from_be_bytes(bytes[8..12].try_into().expect("4 bytes"));
-            let _months = i32::from_be_bytes(bytes[12..16].try_into().expect("4 bytes"));
+            let (micros_bytes, rest) = bytes.split_first_chunk::<8>().ok_or_else(|| {
+                pyo3::exceptions::PyValueError::new_err("Invalid INTERVAL binary data")
+            })?;
+            let (days_bytes, rest) = rest.split_first_chunk::<4>().ok_or_else(|| {
+                pyo3::exceptions::PyValueError::new_err("Invalid INTERVAL binary data")
+            })?;
+            let (months_bytes, _) = rest.split_first_chunk::<4>().ok_or_else(|| {
+                pyo3::exceptions::PyValueError::new_err("Invalid INTERVAL binary data")
+            })?;
+            let micros = i64::from_be_bytes(*micros_bytes);
+            let days = i32::from_be_bytes(*days_bytes);
+            let _months = i32::from_be_bytes(*months_bytes);
 
             let timedelta_class = get_timedelta_class(py)?;
             let seconds = (micros / 1_000_000) as i32;
@@ -490,18 +494,16 @@ fn micros_since_pg_epoch_to_datetime(micros: i64) -> (i32, u32, u32, u32, u32, u
 
 /// Decode `PostgreSQL` binary numeric format to string
 fn decode_numeric_binary(bytes: &[u8]) -> PyResult<String> {
-    if bytes.len() < 8 {
-        return Err(pyo3::exceptions::PyValueError::new_err(
-            "Invalid NUMERIC binary data",
-        ));
-    }
+    let (header, digit_bytes) = bytes
+        .split_first_chunk::<8>()
+        .ok_or_else(|| pyo3::exceptions::PyValueError::new_err("Invalid NUMERIC binary data"))?;
 
-    let ndigits = i16::from_be_bytes([bytes[0], bytes[1]]) as usize;
-    let weight = i16::from_be_bytes([bytes[2], bytes[3]]);
-    let sign = i16::from_be_bytes([bytes[4], bytes[5]]);
-    let dscale = i16::from_be_bytes([bytes[6], bytes[7]]) as usize;
+    let ndigits = i16::from_be_bytes([header[0], header[1]]) as usize;
+    let weight = i16::from_be_bytes([header[2], header[3]]);
+    let sign = i16::from_be_bytes([header[4], header[5]]);
+    let dscale = i16::from_be_bytes([header[6], header[7]]) as usize;
 
-    if bytes.len() < 8 + ndigits * 2 {
+    if digit_bytes.len() < ndigits * 2 {
         return Err(pyo3::exceptions::PyValueError::new_err(
             "Invalid NUMERIC binary data length",
         ));
@@ -514,9 +516,10 @@ fn decode_numeric_binary(bytes: &[u8]) -> PyResult<String> {
 
     // Collect digits (each is 0-9999 representing 4 decimal digits)
     let mut digits: Vec<i16> = Vec::with_capacity(ndigits);
-    for i in 0..ndigits {
-        let d = i16::from_be_bytes([bytes[8 + i * 2], bytes[9 + i * 2]]);
-        digits.push(d);
+    let mut remaining = &digit_bytes[..ndigits * 2];
+    while let Some((pair, rest)) = remaining.split_first_chunk::<2>() {
+        digits.push(i16::from_be_bytes(*pair));
+        remaining = rest;
     }
 
     // Build string

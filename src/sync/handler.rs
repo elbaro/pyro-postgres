@@ -43,7 +43,7 @@ impl SimpleHandler for TupleHandler<'_> {
             let py_value = match value {
                 None => self.py.None().into_bound(self.py),
                 Some(bytes) => decode_text_to_python(self.py, field.type_oid(), bytes)
-                    .map_err(|e| zero_postgres::Error::Protocol(e.to_string()))?
+                    .map_err(|e| zero_postgres::Error::Decode(e.to_string()))?
                     .into_bound(self.py),
             };
             tuple.set(i, py_value);
@@ -52,7 +52,7 @@ impl SimpleHandler for TupleHandler<'_> {
         self.rows
             .bind(self.py)
             .append(tuple.build(self.py))
-            .expect("append");
+            .map_err(|e| zero_postgres::Error::Decode(e.to_string()))?;
         Ok(())
     }
 
@@ -71,7 +71,7 @@ impl ExtendedHandler for TupleHandler<'_> {
             let py_value = match value {
                 None => self.py.None().into_bound(self.py),
                 Some(bytes) => decode_binary_to_python(self.py, field.type_oid(), bytes)
-                    .map_err(|e| zero_postgres::Error::Protocol(e.to_string()))?
+                    .map_err(|e| zero_postgres::Error::Decode(e.to_string()))?
                     .into_bound(self.py),
             };
             tuple.set(i, py_value);
@@ -80,7 +80,7 @@ impl ExtendedHandler for TupleHandler<'_> {
         self.rows
             .bind(self.py)
             .append(tuple.build(self.py))
-            .expect("append");
+            .map_err(|e| zero_postgres::Error::Decode(e.to_string()))?;
         Ok(())
     }
 
@@ -123,13 +123,17 @@ impl SimpleHandler for DictHandler<'_> {
             let py_value = match value {
                 None => self.py.None().into_bound(self.py),
                 Some(bytes) => decode_text_to_python(self.py, field.type_oid(), bytes)
-                    .map_err(|e| zero_postgres::Error::Protocol(e.to_string()))?
+                    .map_err(|e| zero_postgres::Error::Decode(e.to_string()))?
                     .into_bound(self.py),
             };
-            dict.set_item(field.name, py_value).expect("set_item");
+            dict.set_item(field.name, py_value)
+                .map_err(|e| zero_postgres::Error::Decode(e.to_string()))?;
         }
 
-        self.rows.bind(self.py).append(dict).expect("append");
+        self.rows
+            .bind(self.py)
+            .append(dict)
+            .map_err(|e| zero_postgres::Error::Decode(e.to_string()))?;
         Ok(())
     }
 
@@ -147,13 +151,17 @@ impl ExtendedHandler for DictHandler<'_> {
             let py_value = match value {
                 None => self.py.None().into_bound(self.py),
                 Some(bytes) => decode_binary_to_python(self.py, field.type_oid(), bytes)
-                    .map_err(|e| zero_postgres::Error::Protocol(e.to_string()))?
+                    .map_err(|e| zero_postgres::Error::Decode(e.to_string()))?
                     .into_bound(self.py),
             };
-            dict.set_item(field.name, py_value).expect("set_item");
+            dict.set_item(field.name, py_value)
+                .map_err(|e| zero_postgres::Error::Decode(e.to_string()))?;
         }
 
-        self.rows.bind(self.py).append(dict).expect("append");
+        self.rows
+            .bind(self.py)
+            .append(dict)
+            .map_err(|e| zero_postgres::Error::Decode(e.to_string()))?;
         Ok(())
     }
 

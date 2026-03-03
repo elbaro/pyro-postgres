@@ -16,27 +16,11 @@ static NAME_COUNTER: AtomicU64 = AtomicU64::new(0);
 
 #[pyclass(module = "pyro_postgres.async_", name = "Transaction")]
 pub struct AsyncTransaction {
-    conn: Py<AsyncConn>,
-    isolation_level: Option<String>,
-    readonly: Option<bool>,
-    started: bool,
-    finished: bool,
-}
-
-impl AsyncTransaction {
-    pub fn new(
-        conn: Py<AsyncConn>,
-        isolation_level: Option<String>,
-        readonly: Option<bool>,
-    ) -> Self {
-        Self {
-            conn,
-            isolation_level,
-            readonly,
-            started: false,
-            finished: false,
-        }
-    }
+    pub(crate) conn: Py<AsyncConn>,
+    pub(crate) isolation_level: Option<String>,
+    pub(crate) readonly: Option<bool>,
+    pub(crate) started: bool,
+    pub(crate) finished: bool,
 }
 
 #[pymethods]
@@ -55,14 +39,14 @@ impl AsyncTransaction {
         };
 
         rust_future_into_py(py, async move {
-            let conn_inner = Python::attach(|py| {
-                let conn_ref = conn.bind(py).borrow();
+            let conn_inner = Python::attach(|py1| {
+                let conn_ref = conn.bind(py1).borrow();
                 Arc::clone(&conn_ref.inner)
             });
 
             // Build BEGIN command
             let mut begin_sql = String::from("BEGIN");
-            if let Some(ref level) = isolation_level {
+            if let Some(level) = &isolation_level {
                 begin_sql.push_str(" ISOLATION LEVEL ");
                 begin_sql.push_str(level);
             }
@@ -80,8 +64,8 @@ impl AsyncTransaction {
             let mut handler = DropHandler::default();
             inner_conn.query(&begin_sql, &mut handler).await?;
 
-            Python::attach(|py| {
-                let conn_ref = conn.bind(py).borrow();
+            Python::attach(|py2| {
+                let conn_ref = conn.bind(py2).borrow();
                 conn_ref.in_transaction.store(true, Ordering::SeqCst);
             });
 
@@ -108,8 +92,8 @@ impl AsyncTransaction {
         self.finished = true;
 
         rust_future_into_py(py, async move {
-            let conn_inner = Python::attach(|py| {
-                let conn_ref = conn.bind(py).borrow();
+            let conn_inner = Python::attach(|py1| {
+                let conn_ref = conn.bind(py1).borrow();
                 Arc::clone(&conn_ref.inner)
             });
 
@@ -121,8 +105,8 @@ impl AsyncTransaction {
                 let _ = inner_conn.query(sql, &mut handler).await;
             }
 
-            Python::attach(|py| {
-                let conn_ref = conn.bind(py).borrow();
+            Python::attach(|py2| {
+                let conn_ref = conn.bind(py2).borrow();
                 conn_ref.in_transaction.store(false, Ordering::SeqCst);
             });
 
@@ -142,8 +126,8 @@ impl AsyncTransaction {
         self.finished = true;
 
         rust_future_into_py(py, async move {
-            let conn_inner = Python::attach(|py| {
-                let conn_ref = conn.bind(py).borrow();
+            let conn_inner = Python::attach(|py1| {
+                let conn_ref = conn.bind(py1).borrow();
                 Arc::clone(&conn_ref.inner)
             });
 
@@ -153,8 +137,8 @@ impl AsyncTransaction {
             let mut handler = DropHandler::default();
             inner_conn.query("COMMIT", &mut handler).await?;
 
-            Python::attach(|py| {
-                let conn_ref = conn.bind(py).borrow();
+            Python::attach(|py2| {
+                let conn_ref = conn.bind(py2).borrow();
                 conn_ref.in_transaction.store(false, Ordering::SeqCst);
             });
 
@@ -174,8 +158,8 @@ impl AsyncTransaction {
         self.finished = true;
 
         rust_future_into_py(py, async move {
-            let conn_inner = Python::attach(|py| {
-                let conn_ref = conn.bind(py).borrow();
+            let conn_inner = Python::attach(|py1| {
+                let conn_ref = conn.bind(py1).borrow();
                 Arc::clone(&conn_ref.inner)
             });
 
@@ -185,8 +169,8 @@ impl AsyncTransaction {
             let mut handler = DropHandler::default();
             inner_conn.query("ROLLBACK", &mut handler).await?;
 
-            Python::attach(|py| {
-                let conn_ref = conn.bind(py).borrow();
+            Python::attach(|py2| {
+                let conn_ref = conn.bind(py2).borrow();
                 conn_ref.in_transaction.store(false, Ordering::SeqCst);
             });
 
@@ -238,8 +222,8 @@ impl AsyncTransaction {
         let portal_id = NAME_COUNTER.fetch_add(1, Ordering::Relaxed);
 
         rust_future_into_py(py, async move {
-            let conn_inner = Python::attach(|py| {
-                let conn_ref = conn.bind(py).borrow();
+            let conn_inner = Python::attach(|py1| {
+                let conn_ref = conn.bind(py1).borrow();
                 Arc::clone(&conn_ref.inner)
             });
 
@@ -258,7 +242,11 @@ impl AsyncTransaction {
                 .lowlevel_bind(&portal_name, &stmt.wire_name(), params_adapter)
                 .await?;
 
-            Ok(AsyncNamedPortal::new(portal_name, conn))
+            Ok(AsyncNamedPortal {
+                name: portal_name,
+                complete: false,
+                conn,
+            })
         })
     }
 }

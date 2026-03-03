@@ -1,3 +1,6 @@
+// PyO3's create_exception! macro generates inherent methods that shadow trait methods.
+#![allow(clippy::same_name_method)]
+
 use pyo3::exceptions::PyException;
 use pyo3::prelude::*;
 
@@ -10,6 +13,7 @@ pyo3::create_exception!(pyro_postgres.error, TransactionClosedError, PyException
 pyo3::create_exception!(pyro_postgres.error, DecodeError, PyException);
 pyo3::create_exception!(pyro_postgres.error, PoisonError, PyException);
 pyo3::create_exception!(pyro_postgres.error, PythonObjectCreationError, PyException);
+pyo3::create_exception!(pyro_postgres.error, LibraryBugError, PyException);
 
 /// Internal error type for pyro-postgres
 #[derive(Debug)]
@@ -22,6 +26,7 @@ pub enum Error {
     DecodeError(String),
     PoisonError(String),
     PythonObjectCreationError(String),
+    LibraryBug(&'static str),
 }
 
 impl std::fmt::Display for Error {
@@ -37,6 +42,7 @@ impl std::fmt::Display for Error {
             Error::PythonObjectCreationError(msg) => {
                 write!(f, "Python object creation error: {msg}")
             }
+            Error::LibraryBug(msg) => write!(f, "Library bug: {msg}"),
         }
     }
 }
@@ -56,6 +62,7 @@ impl From<Error> for PyErr {
             Error::DecodeError(msg) => DecodeError::new_err(msg),
             Error::PoisonError(msg) => PoisonError::new_err(msg),
             Error::PythonObjectCreationError(msg) => PythonObjectCreationError::new_err(msg),
+            Error::LibraryBug(msg) => LibraryBugError::new_err(msg),
         }
     }
 }

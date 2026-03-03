@@ -27,31 +27,22 @@ use crate::zero_params_adapter::ParamsAdapter;
 /// ```
 #[pyclass(module = "pyro_postgres.sync", name = "Pipeline", unsendable)]
 pub struct SyncPipeline {
-    conn: Py<SyncConn>,
+    pub(crate) conn: Py<SyncConn>,
     // Transmuted to 'static - safe because we hold the guard and Py<SyncConn>
     // SAFETY: The guard keeps the Mutex locked, and Py<SyncConn> keeps SyncConn alive.
     // Pipeline is dropped before guard in cleanup().
-    guard: Option<MutexGuard<'static, Option<Conn>>>,
-    pipeline: Option<Pipeline<'static>>,
+    pub(crate) guard: Option<MutexGuard<'static, Option<Conn>>>,
+    pub(crate) pipeline: Option<Pipeline<'static>>,
     /// Statements stored here to ensure they outlive their tickets.
-    statements: Vec<Py<PreparedStatement>>,
-    entered: bool,
+    pub(crate) statements: Vec<Py<PreparedStatement>>,
+    pub(crate) entered: bool,
 }
 
+#[pymethods]
 impl SyncPipeline {
-    pub fn new(conn: Py<SyncConn>) -> Self {
-        Self {
-            conn,
-            guard: None,
-            pipeline: None,
-            statements: Vec::new(),
-            entered: false,
-        }
-    }
-
     fn cleanup(&mut self) {
         // Drop pipeline first (calls Pipeline::cleanup internally via Drop or explicit call)
-        if let Some(ref mut pipeline) = self.pipeline {
+        if let Some(pipeline) = &mut self.pipeline {
             pipeline.cleanup();
         }
         self.pipeline = None;
@@ -61,10 +52,7 @@ impl SyncPipeline {
         self.guard = None;
         self.entered = false;
     }
-}
 
-#[pymethods]
-impl SyncPipeline {
     fn __enter__(mut slf: PyRefMut<'_, Self>) -> PyResult<PyRefMut<'_, Self>> {
         if slf.entered {
             return Err(Error::IncorrectApiUsageError("Pipeline already entered").into());
@@ -90,8 +78,8 @@ impl SyncPipeline {
         let guard_ref = slf.guard.as_mut().ok_or(Error::ConnectionClosedError)?;
         let conn = guard_ref.as_mut().ok_or(Error::ConnectionClosedError)?;
 
-        // SAFETY: Same reasoning as above for the lifetime transmute
         let pipeline = Pipeline::new(conn);
+        // SAFETY: Same reasoning as above for the lifetime transmute
         let pipeline: Pipeline<'static> = unsafe { std::mem::transmute(pipeline) };
 
         slf.pipeline = Some(pipeline);
@@ -136,9 +124,14 @@ impl SyncPipeline {
                 // Store the statement to keep it alive
                 self.statements.push(stmt_py);
                 // Get a reference to the stored statement's inner PreparedStatement
-                // SAFETY: PreparedStatement is frozen, so .get() is safe without the GIL.
+                // GIL: PreparedStatement is frozen, so .get() is safe without the GIL.
                 // The Py<PreparedStatement> in self.statements keeps it alive.
-                let stmt_ref = &self.statements.last().expect("just pushed").get().inner;
+                let stmt_ref = &self
+                    .statements
+                    .last()
+                    .ok_or(crate::error::Error::LibraryBug("just pushed"))?
+                    .get()
+                    .inner;
                 let ticket = pipeline.exec(stmt_ref, params_adapter)?;
                 // SAFETY: The stmt reference points to a PreparedStatement stored in
                 // self.statements, which lives until pipeline cleanup.

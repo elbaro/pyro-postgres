@@ -22,22 +22,11 @@ use crate::util::{PyroFuture, rust_future_into_py};
 #[pyclass(module = "pyro_postgres.async_", name = "NamedPortal")]
 pub struct AsyncNamedPortal {
     /// The portal name on the server
-    name: String,
+    pub(crate) name: String,
     /// Whether all rows have been fetched
-    complete: bool,
+    pub(crate) complete: bool,
     /// Reference to the connection
-    conn: Py<AsyncConn>,
-}
-
-impl AsyncNamedPortal {
-    /// Create a new named portal wrapper.
-    pub fn new(name: String, conn: Py<AsyncConn>) -> Self {
-        Self {
-            name,
-            complete: false,
-            conn,
-        }
-    }
+    pub(crate) conn: Py<AsyncConn>,
 }
 
 #[pymethods]
@@ -68,9 +57,9 @@ impl AsyncNamedPortal {
                 let has_more = conn_inner
                     .lowlevel_execute(&name, max_rows, &mut handler)
                     .await?;
-                Python::attach(|py| {
-                    let rows: Vec<Py<PyDict>> = handler.rows_to_python(py)?;
-                    let list = PyList::new(py, rows)?;
+                Python::attach(|py1| {
+                    let rows: Vec<Py<PyDict>> = handler.rows_to_python(py1)?;
+                    let list = PyList::new(py1, rows)?;
                     Ok((list.unbind(), has_more))
                 })
             } else {
@@ -78,9 +67,9 @@ impl AsyncNamedPortal {
                 let has_more = conn_inner
                     .lowlevel_execute(&name, max_rows, &mut handler)
                     .await?;
-                Python::attach(|py| {
-                    let rows: Vec<pyo3::Py<pyo3::types::PyTuple>> = handler.rows_to_python(py)?;
-                    let list = PyList::new(py, rows)?;
+                Python::attach(|py2| {
+                    let rows: Vec<pyo3::Py<pyo3::types::PyTuple>> = handler.rows_to_python(py2)?;
+                    let list = PyList::new(py2, rows)?;
                     Ok((list.unbind(), has_more))
                 })
             }

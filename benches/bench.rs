@@ -33,7 +33,7 @@ pub fn bench(c: &mut Criterion) {
                     let setup = setup_template.replace("{}", &select_size.to_string());
                     let c_setup = std::ffi::CString::new(setup).unwrap();
                     Python::run(py, c_setup.as_c_str(), None, None).unwrap();
-                    b.iter(|| py.run(&statement, None, None).unwrap());
+                    b.iter(|| py.run(statement, None, None).unwrap());
                 });
             });
         }
@@ -91,7 +91,7 @@ pub fn bench(c: &mut Criterion) {
                     let setup = setup_template.replace("{}", &select_size.to_string());
                     let c_setup = std::ffi::CString::new(setup).unwrap();
                     Python::run(py, c_setup.as_c_str(), None, None).unwrap();
-                    b.iter(|| py.run(&statement, None, None).unwrap());
+                    b.iter(|| py.run(statement, None, None).unwrap());
                 });
             });
         }
@@ -135,49 +135,49 @@ pub fn bench(c: &mut Criterion) {
         for (name, setup, clear_stmt, stmt_template) in [
             (
                 "pyro (async)",
-                cr"conn = loop.run_until_complete(create_pyro_async_conn())",
+                c"conn = loop.run_until_complete(create_pyro_async_conn())",
                 c"loop.run_until_complete(clear_table_pyro_async(conn))",
                 "loop.run_until_complete(insert_pyro_async(conn, {}))",
             ),
             (
                 "pyro (async, pipeline)",
-                cr"conn = loop.run_until_complete(create_pyro_async_conn())",
+                c"conn = loop.run_until_complete(create_pyro_async_conn())",
                 c"loop.run_until_complete(clear_table_pyro_async(conn))",
                 "loop.run_until_complete(insert_pyro_async_pipeline(conn, {}))",
             ),
             (
                 "pyro (async, batch)",
-                cr"conn = loop.run_until_complete(create_pyro_async_conn())",
+                c"conn = loop.run_until_complete(create_pyro_async_conn())",
                 c"loop.run_until_complete(clear_table_pyro_async(conn))",
                 "loop.run_until_complete(insert_pyro_async_batch(conn, {}))",
             ),
             (
                 "asyncpg (async)",
-                cr"conn = loop.run_until_complete(create_asyncpg_conn())",
+                c"conn = loop.run_until_complete(create_asyncpg_conn())",
                 c"loop.run_until_complete(clear_table_asyncpg(conn))",
                 "loop.run_until_complete(insert_asyncpg(conn, {}))",
             ),
             (
                 "asyncpg (async, executemany)",
-                cr"conn = loop.run_until_complete(create_asyncpg_conn())",
+                c"conn = loop.run_until_complete(create_asyncpg_conn())",
                 c"loop.run_until_complete(clear_table_asyncpg(conn))",
                 "loop.run_until_complete(insert_asyncpg_batch(conn, {}))",
             ),
             (
                 "psycopg (async)",
-                cr"conn = loop.run_until_complete(create_psycopg_async_conn())",
+                c"conn = loop.run_until_complete(create_psycopg_async_conn())",
                 c"loop.run_until_complete(clear_table_psycopg_async(conn))",
                 "loop.run_until_complete(insert_psycopg_async(conn, {}))",
             ),
             (
                 "psycopg (async, executemany)",
-                cr"conn = loop.run_until_complete(create_psycopg_async_conn())",
+                c"conn = loop.run_until_complete(create_psycopg_async_conn())",
                 c"loop.run_until_complete(clear_table_psycopg_async(conn))",
                 "loop.run_until_complete(insert_psycopg_async_batch(conn, {}))",
             ),
             (
                 "psycopg (async, pipeline)",
-                cr"conn = loop.run_until_complete(create_psycopg_async_conn())",
+                c"conn = loop.run_until_complete(create_psycopg_async_conn())",
                 c"loop.run_until_complete(clear_table_psycopg_async(conn))",
                 "loop.run_until_complete(insert_psycopg_async_pipeline(conn, {}))",
             ),
@@ -218,37 +218,37 @@ pub fn bench(c: &mut Criterion) {
         for (name, setup, clear_stmt, stmt_template) in [
             (
                 "pyro (sync)",
-                cr"conn = create_pyro_sync_conn()",
+                c"conn = create_pyro_sync_conn()",
                 c"clear_table_pyro_sync(conn)",
                 "insert_pyro_sync(conn, {})",
             ),
             (
                 "pyro (sync, pipeline)",
-                cr"conn = create_pyro_sync_conn()",
+                c"conn = create_pyro_sync_conn()",
                 c"clear_table_pyro_sync(conn)",
                 "insert_pyro_sync_pipeline(conn, {})",
             ),
             (
                 "pyro (sync, batch)",
-                cr"conn = create_pyro_sync_conn()",
+                c"conn = create_pyro_sync_conn()",
                 c"clear_table_pyro_sync(conn)",
                 "insert_pyro_sync_batch(conn, {})",
             ),
             (
                 "psycopg (sync)",
-                cr"conn = create_psycopg_sync_conn()",
+                c"conn = create_psycopg_sync_conn()",
                 c"clear_table_psycopg_sync(conn)",
                 "insert_psycopg_sync(conn, {})",
             ),
             (
                 "psycopg (sync, executemany)",
-                cr"conn = create_psycopg_sync_conn()",
+                c"conn = create_psycopg_sync_conn()",
                 c"clear_table_psycopg_sync(conn)",
                 "insert_psycopg_sync_batch(conn, {})",
             ),
             (
                 "psycopg (sync, pipeline)",
-                cr"conn = create_psycopg_sync_conn()",
+                c"conn = create_psycopg_sync_conn()",
                 c"clear_table_psycopg_sync(conn)",
                 "insert_psycopg_sync_pipeline(conn, {})",
             ),

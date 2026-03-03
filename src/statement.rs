@@ -20,12 +20,6 @@ pub struct PreparedStatement {
     pub inner: ZeroPreparedStatement,
 }
 
-impl PreparedStatement {
-    pub fn new(inner: ZeroPreparedStatement) -> Self {
-        Self { inner }
-    }
-}
-
 #[pymethods]
 impl PreparedStatement {
     fn __repr__(&self) -> String {

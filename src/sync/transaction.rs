@@ -12,27 +12,11 @@ static NAME_COUNTER: AtomicU64 = AtomicU64::new(0);
 
 #[pyclass(module = "pyro_postgres.sync", name = "Transaction")]
 pub struct SyncTransaction {
-    conn: Py<SyncConn>,
-    isolation_level: Option<String>,
-    readonly: Option<bool>,
-    started: bool,
-    finished: bool,
-}
-
-impl SyncTransaction {
-    pub fn new(
-        conn: Py<SyncConn>,
-        isolation_level: Option<String>,
-        readonly: Option<bool>,
-    ) -> Self {
-        Self {
-            conn,
-            isolation_level,
-            readonly,
-            started: false,
-            finished: false,
-        }
-    }
+    pub(crate) conn: Py<SyncConn>,
+    pub(crate) isolation_level: Option<String>,
+    pub(crate) readonly: Option<bool>,
+    pub(crate) started: bool,
+    pub(crate) finished: bool,
 }
 
 #[pymethods]
@@ -51,7 +35,7 @@ impl SyncTransaction {
             // Build BEGIN command
             let mut begin_sql = String::from("BEGIN");
 
-            if let Some(ref level) = slf.isolation_level {
+            if let Some(level) = &slf.isolation_level {
                 begin_sql.push_str(" ISOLATION LEVEL ");
                 begin_sql.push_str(level);
             }
@@ -177,6 +161,10 @@ impl SyncTransaction {
         let params_adapter = ParamsAdapter::new(&params);
         inner.lowlevel_bind(&portal_name, &stmt.wire_name(), params_adapter)?;
 
-        Ok(SyncNamedPortal::new(portal_name, self.conn.clone_ref(py)))
+        Ok(SyncNamedPortal {
+            name: portal_name,
+            complete: false,
+            conn: self.conn.clone_ref(py),
+        })
     }
 }

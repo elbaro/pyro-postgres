@@ -39,9 +39,7 @@ impl IsolationLevel {
             IsolationLevel::Serializable => "IsolationLevel.Serializable",
         }
     }
-}
 
-impl IsolationLevel {
     pub fn as_str(&self) -> &'static str {
         match self {
             IsolationLevel::ReadUncommitted => "READ UNCOMMITTED",

@@ -31,30 +31,20 @@ use crate::zero_params_adapter::ParamsAdapter;
 /// ```
 #[pyclass(module = "pyro_postgres.async_", name = "Pipeline")]
 pub struct AsyncPipeline {
-    conn: Py<AsyncConn>,
+    pub(crate) conn: Py<AsyncConn>,
     // We store the guard and pipeline in a mutex so we can access them from async methods
     // Using OwnedMutexGuard which is Send and can be moved across tasks
-    state: Arc<Mutex<Option<PipelineState>>>,
-    entered: std::sync::atomic::AtomicBool,
+    pub(crate) state: Arc<Mutex<Option<PipelineState>>>,
+    pub(crate) entered: std::sync::atomic::AtomicBool,
 }
 
-struct PipelineState {
-    #[allow(dead_code)]
+pub(crate) struct PipelineState {
+    #[expect(dead_code)]
     guard: OwnedMutexGuard<Option<Conn>>,
     pipeline: Pipeline<'static>,
     /// Statements stored here to ensure they outlive their tickets.
     /// The Ticket's `stmt` field references the inner `PreparedStatement`.
     statements: Vec<Py<PreparedStatement>>,
-}
-
-impl AsyncPipeline {
-    pub fn new(conn: Py<AsyncConn>) -> Self {
-        Self {
-            conn,
-            state: Arc::new(Mutex::new(None)),
-            entered: std::sync::atomic::AtomicBool::new(false),
-        }
-    }
 }
 
 #[pymethods]
@@ -74,7 +64,7 @@ impl AsyncPipeline {
         }
 
         rust_future_into_py(py, async move {
-            let conn_ref = Python::attach(|py| Arc::clone(&conn.bind(py).borrow().inner));
+            let conn_ref = Python::attach(|py1| Arc::clone(&conn.bind(py1).borrow().inner));
 
             // Acquire the owned mutex guard - this can be moved across tasks
             let mut guard = conn_ref.lock_owned().await;
@@ -85,12 +75,12 @@ impl AsyncPipeline {
             }
 
             // Create the pipeline
+            let conn_mut = guard.as_mut().ok_or(Error::ConnectionClosedError)?;
+            let pipeline = Pipeline::new(conn_mut);
             // SAFETY: We transmute the Pipeline lifetime to 'static because:
             // 1. We hold Py<AsyncConn> which keeps AsyncConn alive
             // 2. We hold the OwnedMutexGuard which prevents other access and keeps Conn alive
             // 3. Pipeline is dropped before guard in cleanup
-            let conn_mut = guard.as_mut().ok_or(Error::ConnectionClosedError)?;
-            let pipeline = Pipeline::new(conn_mut);
             let pipeline: Pipeline<'static> = unsafe { std::mem::transmute(pipeline) };
 
             {
@@ -163,9 +153,14 @@ impl AsyncPipeline {
                 state.statements.push(stmt_py);
 
                 // Get a reference to the stored statement's inner PreparedStatement
-                // SAFETY: PreparedStatement is frozen, so .get() is safe without the GIL.
+                // GIL: PreparedStatement is frozen, so .get() is safe without the GIL.
                 // The Py<PreparedStatement> in state.statements keeps it alive.
-                let stmt_ref = &state.statements.last().expect("just pushed").get().inner;
+                let stmt_ref = &state
+                    .statements
+                    .last()
+                    .ok_or(crate::error::Error::LibraryBug("just pushed"))?
+                    .get()
+                    .inner;
 
                 let ticket = state
                     .pipeline
@@ -228,15 +223,15 @@ impl AsyncPipeline {
             let result = if as_dict {
                 let mut handler = DictHandler::new();
                 state.pipeline.claim(ticket.inner, &mut handler).await?;
-                Python::attach(|py| {
-                    let rows = handler.rows_to_python(py)?;
+                Python::attach(|py1| {
+                    let rows = handler.rows_to_python(py1)?;
                     Ok(rows.into_iter().next().map(pyo3::Py::into_any))
                 })
             } else {
                 let mut handler = TupleHandler::new();
                 state.pipeline.claim(ticket.inner, &mut handler).await?;
-                Python::attach(|py| {
-                    let rows = handler.rows_to_python(py)?;
+                Python::attach(|py2| {
+                    let rows = handler.rows_to_python(py2)?;
                     Ok(rows.into_iter().next().map(pyo3::Py::into_any))
                 })
             };
@@ -267,15 +262,15 @@ impl AsyncPipeline {
             let result = if as_dict {
                 let mut handler = DictHandler::new();
                 state.pipeline.claim(ticket.inner, &mut handler).await?;
-                Python::attach(|py| {
-                    let rows: Vec<Py<PyDict>> = handler.rows_to_python(py)?;
+                Python::attach(|py1| {
+                    let rows: Vec<Py<PyDict>> = handler.rows_to_python(py1)?;
                     Ok(rows.into_iter().map(pyo3::Py::into_any).collect())
                 })
             } else {
                 let mut handler = TupleHandler::new();
                 state.pipeline.claim(ticket.inner, &mut handler).await?;
-                Python::attach(|py| {
-                    let rows: Vec<Py<PyTuple>> = handler.rows_to_python(py)?;
+                Python::attach(|py2| {
+                    let rows: Vec<Py<PyTuple>> = handler.rows_to_python(py2)?;
                     Ok(rows.into_iter().map(pyo3::Py::into_any).collect())
                 })
             };

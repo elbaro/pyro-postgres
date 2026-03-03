@@ -11,14 +11,14 @@ pub struct Params(pub Vec<Value>);
 impl FromPyObject<'_, '_> for Params {
     type Error = PyErr;
 
-    fn extract(ob: Borrowed<PyAny>) -> Result<Self, Self::Error> {
+    fn extract(obj: Borrowed<PyAny>) -> Result<Self, Self::Error> {
         // Accept None, tuple, or list
-        if ob.is_none() {
+        if obj.is_none() {
             return Ok(Params(Vec::new()));
         }
 
         // Try to extract as a sequence
-        let seq = ob.cast::<pyo3::types::PySequence>()?;
+        let seq = obj.cast::<pyo3::types::PySequence>()?;
         let len = seq.len()?;
         let mut values = Vec::with_capacity(len);
 

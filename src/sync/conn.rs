@@ -45,7 +45,13 @@ impl SyncConn {
         readonly: Option<bool>,
     ) -> SyncTransaction {
         let isolation_level_str: Option<String> = isolation_level.map(|l| l.as_str().to_string());
-        SyncTransaction::new(slf, isolation_level_str, readonly)
+        SyncTransaction {
+            conn: slf,
+            isolation_level: isolation_level_str,
+            readonly,
+            started: false,
+            finished: false,
+        }
     }
 
     /// Create a pipeline for batching multiple queries.
@@ -60,7 +66,13 @@ impl SyncConn {
     ///     result2 = p.claim_collect(t2)
     /// ```
     fn pipeline(slf: Py<Self>) -> SyncPipeline {
-        SyncPipeline::new(slf)
+        SyncPipeline {
+            conn: slf,
+            guard: None,
+            pipeline: None,
+            statements: Vec::new(),
+            entered: false,
+        }
     }
 
     fn id(&self) -> PyroResult<u32> {
@@ -326,24 +338,40 @@ impl SyncConn {
             Either::Left(query) => {
                 let prepared = conn.prepare(&query)?;
                 Ok(conn.exec_portal(&prepared, params_adapter, |portal| {
-                    let py_portal = unsafe { SyncUnnamedPortal::new(portal) };
+                    // The portal is a valid mutable reference within this callback.
+                    // The SyncUnnamedPortal must not outlive this closure.
+                    #[expect(clippy::unnecessary_cast)]
+                    let portal_ptr = portal as *mut zero_postgres::sync::UnnamedPortal<'_>
+                        as *mut zero_postgres::sync::UnnamedPortal<'static>;
+                    let py_portal = SyncUnnamedPortal {
+                        // SAFETY: portal_ptr is from a valid mutable reference, so non-null
+                        portal: unsafe { std::ptr::NonNull::new_unchecked(portal_ptr) },
+                    };
                     let py_portal_obj = Py::new(py, py_portal)
-                        .map_err(|e| zero_postgres::Error::Protocol(e.to_string()))?;
+                        .map_err(|e| zero_postgres::Error::Decode(e.to_string()))?;
                     let result = callback
                         .call1(py, (py_portal_obj,))
-                        .map_err(|e| zero_postgres::Error::Protocol(e.to_string()))?;
+                        .map_err(|e| zero_postgres::Error::Decode(e.to_string()))?;
                     Ok(result)
                 })?)
             }
             Either::Right(prepared) => {
                 let stmt_ref = &prepared.borrow(py).inner;
                 Ok(conn.exec_portal(stmt_ref, params_adapter, |portal| {
-                    let py_portal = unsafe { SyncUnnamedPortal::new(portal) };
+                    // The portal is a valid mutable reference within this callback.
+                    // The SyncUnnamedPortal must not outlive this closure.
+                    #[expect(clippy::unnecessary_cast)]
+                    let portal_ptr = portal as *mut zero_postgres::sync::UnnamedPortal<'_>
+                        as *mut zero_postgres::sync::UnnamedPortal<'static>;
+                    let py_portal = SyncUnnamedPortal {
+                        // SAFETY: portal_ptr is from a valid mutable reference, so non-null
+                        portal: unsafe { std::ptr::NonNull::new_unchecked(portal_ptr) },
+                    };
                     let py_portal_obj = Py::new(py, py_portal)
-                        .map_err(|e| zero_postgres::Error::Protocol(e.to_string()))?;
+                        .map_err(|e| zero_postgres::Error::Decode(e.to_string()))?;
                     let result = callback
                         .call1(py, (py_portal_obj,))
-                        .map_err(|e| zero_postgres::Error::Protocol(e.to_string()))?;
+                        .map_err(|e| zero_postgres::Error::Decode(e.to_string()))?;
                     Ok(result)
                 })?)
             }
@@ -363,7 +391,7 @@ impl SyncConn {
         let mut guard = self.inner.lock();
         let conn = guard.as_mut().ok_or(Error::ConnectionClosedError)?;
         let stmt = conn.prepare(query)?;
-        Ok(PreparedStatement::new(stmt))
+        Ok(PreparedStatement { inner: stmt })
     }
 
     /// Prepare multiple statements in a single round trip.
@@ -380,7 +408,12 @@ impl SyncConn {
 
         let sql_refs: Vec<&str> = sqls.iter().map(|s| &**s).collect();
         let statements = conn.prepare_batch(&sql_refs)?;
-        let list = PyList::new(py, statements.into_iter().map(PreparedStatement::new))?;
+        let list = PyList::new(
+            py,
+            statements
+                .into_iter()
+                .map(|inner| PreparedStatement { inner }),
+        )?;
         Ok(list.unbind())
     }
 
@@ -399,10 +432,7 @@ impl SyncConn {
         }
         Ok(String::new())
     }
-}
 
-// Public methods for internal use (not exposed to Python via #[pymethods])
-impl SyncConn {
     pub fn query_drop_internal(&self, query: String) -> PyroResult<()> {
         let mut guard = self.inner.lock();
         let conn = guard.as_mut().ok_or(Error::ConnectionClosedError)?;

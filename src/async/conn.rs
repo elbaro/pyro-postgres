@@ -66,7 +66,13 @@ impl AsyncConn {
         readonly: Option<bool>,
     ) -> AsyncTransaction {
         let isolation_level_str: Option<String> = isolation_level.map(|l| l.as_str().to_string());
-        AsyncTransaction::new(slf, isolation_level_str, readonly)
+        AsyncTransaction {
+            conn: slf,
+            isolation_level: isolation_level_str,
+            readonly,
+            started: false,
+            finished: false,
+        }
     }
 
     /// Create a pipeline for batching multiple queries.
@@ -81,7 +87,11 @@ impl AsyncConn {
     ///     result2 = await p.claim_collect(t2)
     /// ```
     fn pipeline(slf: Py<Self>) -> AsyncPipeline {
-        AsyncPipeline::new(slf)
+        AsyncPipeline {
+            conn: slf,
+            state: Arc::new(parking_lot::Mutex::new(None)),
+            entered: std::sync::atomic::AtomicBool::new(false),
+        }
     }
 
     fn id(&self, py: Python<'_>) -> PyResult<Py<PyroFuture>> {
@@ -142,16 +152,16 @@ impl AsyncConn {
                 let mut handler = dict_handler.lock().await;
                 handler.clear();
                 conn.query(&query, &mut *handler).await?;
-                Python::attach(|py| {
-                    let rows: Vec<Py<PyDict>> = handler.rows_to_python(py)?;
+                Python::attach(|py1| {
+                    let rows: Vec<Py<PyDict>> = handler.rows_to_python(py1)?;
                     Ok(rows.into_iter().map(pyo3::Py::into_any).collect())
                 })
             } else {
                 let mut handler = tuple_handler.lock().await;
                 handler.clear();
                 conn.query(&query, &mut *handler).await?;
-                Python::attach(|py| {
-                    let rows: Vec<Py<PyTuple>> = handler.rows_to_python(py)?;
+                Python::attach(|py2| {
+                    let rows: Vec<Py<PyTuple>> = handler.rows_to_python(py2)?;
                     Ok(rows.into_iter().map(pyo3::Py::into_any).collect())
                 })
             }
@@ -177,16 +187,16 @@ impl AsyncConn {
                 let mut handler = dict_handler.lock().await;
                 handler.clear();
                 conn.query(&query, &mut *handler).await?;
-                Python::attach(|py| {
-                    let rows = handler.rows_to_python(py)?;
+                Python::attach(|py1| {
+                    let rows = handler.rows_to_python(py1)?;
                     Ok(rows.into_iter().next().map(pyo3::Py::into_any))
                 })
             } else {
                 let mut handler = tuple_handler.lock().await;
                 handler.clear();
                 conn.query(&query, &mut *handler).await?;
-                Python::attach(|py| {
-                    let rows = handler.rows_to_python(py)?;
+                Python::attach(|py2| {
+                    let rows = handler.rows_to_python(py2)?;
                     Ok(rows.into_iter().next().map(pyo3::Py::into_any))
                 })
             }
@@ -242,16 +252,16 @@ impl AsyncConn {
                 let mut handler = dict_handler.lock().await;
                 handler.clear();
                 conn.exec(&stmt_ref, params_adapter, &mut *handler).await?;
-                Python::attach(|py| {
-                    let rows: Vec<Py<PyDict>> = handler.rows_to_python(py)?;
+                Python::attach(|py1| {
+                    let rows: Vec<Py<PyDict>> = handler.rows_to_python(py1)?;
                     Ok(rows.into_iter().map(pyo3::Py::into_any).collect())
                 })
             } else {
                 let mut handler = tuple_handler.lock().await;
                 handler.clear();
                 conn.exec(&stmt_ref, params_adapter, &mut *handler).await?;
-                Python::attach(|py| {
-                    let rows: Vec<Py<PyTuple>> = handler.rows_to_python(py)?;
+                Python::attach(|py2| {
+                    let rows: Vec<Py<PyTuple>> = handler.rows_to_python(py2)?;
                     Ok(rows.into_iter().map(pyo3::Py::into_any).collect())
                 })
             }
@@ -291,16 +301,16 @@ impl AsyncConn {
                 let mut handler = dict_handler.lock().await;
                 handler.clear();
                 conn.exec(&stmt_ref, params_adapter, &mut *handler).await?;
-                Python::attach(|py| {
-                    let rows = handler.rows_to_python(py)?;
+                Python::attach(|py1| {
+                    let rows = handler.rows_to_python(py1)?;
                     Ok(rows.into_iter().next().map(pyo3::Py::into_any))
                 })
             } else {
                 let mut handler = tuple_handler.lock().await;
                 handler.clear();
                 conn.exec(&stmt_ref, params_adapter, &mut *handler).await?;
-                Python::attach(|py| {
-                    let rows = handler.rows_to_python(py)?;
+                Python::attach(|py2| {
+                    let rows = handler.rows_to_python(py2)?;
                     Ok(rows.into_iter().next().map(pyo3::Py::into_any))
                 })
             }
@@ -386,12 +396,12 @@ impl AsyncConn {
     /// The callback receives an `UnnamedPortal` that can fetch rows in batches.
     /// Useful for processing large result sets that don't fit in memory.
     ///
-    /// Note: The callback is synchronous - use `portal.fetch()` to get rows.
+    /// Note: The callback is synchronous - use `portal.exec()` to get rows.
     ///
     /// ```python
     /// def process(portal):
     ///     while True:
-    ///         rows, has_more = portal.fetch(1000)
+    ///         rows, has_more = portal.exec(1000)
     ///         for row in rows:
     ///             process_row(row)
     ///         if not has_more:
@@ -434,14 +444,14 @@ impl AsyncConn {
                         std::sync::mpsc::channel::<crate::r#async::unnamed_portal::FetchRequest>();
 
                     // Create the Python portal wrapper with the request channel
-                    let py_portal = AsyncUnnamedPortal::new(request_tx);
+                    let py_portal = AsyncUnnamedPortal { request_tx };
 
                     // Spawn the Python callback on a blocking thread.
                     // This frees the tokio runtime to handle async fetch operations.
                     let callback_handle = std::thread::spawn(move || {
-                        Python::attach(|py| {
-                            let py_portal_obj = Py::new(py, py_portal)?;
-                            callback.call1(py, (py_portal_obj,))
+                        Python::attach(|py1| {
+                            let py_portal_obj = Py::new(py1, py_portal)?;
+                            callback.call1(py1, (py_portal_obj,))
                         })
                     });
 
@@ -453,25 +463,27 @@ impl AsyncConn {
                                 // Perform the async fetch
                                 let result = if request.as_dict {
                                     let mut handler = DictHandler::new();
-                                    match portal.fetch(request.max_rows, &mut handler).await {
-                                        Ok(has_more) => Python::attach(|py| {
+                                    match portal.exec(request.max_rows, &mut handler).await {
+                                        Ok(has_more) => Python::attach(|py2| -> PyResult<_> {
                                             let rows: Vec<Py<PyDict>> =
-                                                handler.rows_to_python(py)?;
-                                            let list = PyList::new(py, rows)?;
+                                                handler.rows_to_python(py2)?;
+                                            let list = PyList::new(py2, rows)?;
                                             Ok((list.unbind(), has_more))
-                                        }),
-                                        Err(e) => Err(e.into()),
+                                        })
+                                        .map_err(|e: PyErr| Error::from(e)),
+                                        Err(e) => Err(Error::from(e)),
                                     }
                                 } else {
                                     let mut handler = TupleHandler::new();
-                                    match portal.fetch(request.max_rows, &mut handler).await {
-                                        Ok(has_more) => Python::attach(|py| {
+                                    match portal.exec(request.max_rows, &mut handler).await {
+                                        Ok(has_more) => Python::attach(|py3| -> PyResult<_> {
                                             let rows: Vec<Py<PyTuple>> =
-                                                handler.rows_to_python(py)?;
-                                            let list = PyList::new(py, rows)?;
+                                                handler.rows_to_python(py3)?;
+                                            let list = PyList::new(py3, rows)?;
                                             Ok((list.unbind(), has_more))
-                                        }),
-                                        Err(e) => Err(e.into()),
+                                        })
+                                        .map_err(|e: PyErr| Error::from(e)),
+                                        Err(e) => Err(Error::from(e)),
                                     }
                                 };
 
@@ -496,10 +508,10 @@ impl AsyncConn {
                     // Get the callback result
                     callback_handle
                         .join()
-                        .map_err(|_| {
-                            zero_postgres::Error::Protocol("callback thread panicked".into())
+                        .map_err(|_unhelpful_err| {
+                            zero_postgres::Error::Decode("callback thread panicked".into())
                         })?
-                        .map_err(|e: PyErr| zero_postgres::Error::Protocol(e.to_string()))
+                        .map_err(|e: PyErr| zero_postgres::Error::Decode(e.to_string()))
                 })
                 .await?;
             Ok(result)
@@ -523,7 +535,7 @@ impl AsyncConn {
             let mut guard = inner.lock().await;
             let conn = guard.as_mut().ok_or(Error::ConnectionClosedError)?;
             let stmt = conn.prepare(&query_string).await?;
-            Ok(PreparedStatement::new(stmt))
+            Ok(PreparedStatement { inner: stmt })
         })
     }
 
@@ -545,23 +557,15 @@ impl AsyncConn {
             let sql_refs: Vec<&str> = sqls.iter().map(|s| &**s).collect();
             let statements = conn.prepare_batch(&sql_refs).await?;
 
-            Python::attach(|py| {
-                let list = PyList::new(py, statements.into_iter().map(PreparedStatement::new))?;
+            Python::attach(|py1| {
+                let list = PyList::new(
+                    py1,
+                    statements
+                        .into_iter()
+                        .map(|stmt| PreparedStatement { inner: stmt }),
+                )?;
                 Ok(list.unbind())
             })
         })
-    }
-}
-
-// Public methods for internal use (not exposed to Python via #[pymethods])
-impl AsyncConn {
-    pub async fn query_drop_internal(&self, query: String) -> PyroResult<()> {
-        let mut guard = self.inner.lock().await;
-        let conn = guard.as_mut().ok_or(Error::ConnectionClosedError)?;
-
-        let mut handler = DropHandler::default();
-        conn.query(&query, &mut handler).await?;
-
-        Ok(())
     }
 }

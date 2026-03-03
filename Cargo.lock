@@ -1177,6 +1177,7 @@ dependencies = [
  "powerfmt",
  "serde",
  "time-core",
+ "time-macros",
 ]
 
 [[package]]
@@ -1184,6 +1185,16 @@ name = "time-core"
 version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "40868e7c1d2f0b8d73e4a8c7f0ff63af4f6d19be117e90bd73eb1d62cf831c6b"
+
+[[package]]
+name = "time-macros"
+version = "0.2.24"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "30cfb0125f12d9c277f35663a0a33f8c30190f4e4574868a330595412d34ebf3"
+dependencies = [
+ "num-conv",
+ "time-core",
+]
 
 [[package]]
 name = "tinystr"
@@ -1507,9 +1518,9 @@ dependencies = [
 
 [[package]]
 name = "zero-postgres"
-version = "0.7.0"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6d345fb79040cd4e35e844d3ffa22f87ac19db2270d8a9d288e2bc3445b20592"
+checksum = "7b43abcf2fd429e8bf557d0ed8cad2fbdcb0f42118a84a803183f64df9248bb3"
 dependencies = [
  "base64",
  "crossbeam-queue",
@@ -1533,9 +1544,9 @@ dependencies = [
 
 [[package]]
 name = "zero-postgres-derive"
-version = "0.1.0"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1ebbb2771b8d2407eda7ffd8859ed9232878ad8161fc54342dddedf65ab09677"
+checksum = "b58c79e03abc5acae65f850d0d21d421c67c802a2109f744b96fed9c28dad07b"
 dependencies = [
  "proc-macro2",
  "quote",

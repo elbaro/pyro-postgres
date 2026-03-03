@@ -166,14 +166,14 @@ fn encode_bool(v: bool, target_oid: Oid, buf: &mut Vec<u8>) -> zero_postgres::Re
 fn encode_int(v: i64, target_oid: Oid, buf: &mut Vec<u8>) -> zero_postgres::Result<()> {
     match target_oid {
         oid::INT2 => {
-            let v16 =
-                i16::try_from(v).map_err(|_| zero_postgres::Error::overflow("i64", "INT2"))?;
+            let v16 = i16::try_from(v)
+                .map_err(|_unhelpful_err| zero_postgres::Error::overflow("i64", "INT2"))?;
             buf.extend_from_slice(&2_i32.to_be_bytes());
             buf.extend_from_slice(&v16.to_be_bytes());
         }
         oid::INT4 => {
-            let v32 =
-                i32::try_from(v).map_err(|_| zero_postgres::Error::overflow("i64", "INT4"))?;
+            let v32 = i32::try_from(v)
+                .map_err(|_unhelpful_err| zero_postgres::Error::overflow("i64", "INT4"))?;
             buf.extend_from_slice(&4_i32.to_be_bytes());
             buf.extend_from_slice(&v32.to_be_bytes());
         }
@@ -193,21 +193,21 @@ fn encode_int(v: i64, target_oid: Oid, buf: &mut Vec<u8>) -> zero_postgres::Resu
 fn encode_uint(v: u64, target_oid: Oid, buf: &mut Vec<u8>) -> zero_postgres::Result<()> {
     match target_oid {
         oid::INT2 => {
-            let v16 =
-                i16::try_from(v).map_err(|_| zero_postgres::Error::overflow("u64", "INT2"))?;
+            let v16 = i16::try_from(v)
+                .map_err(|_unhelpful_err| zero_postgres::Error::overflow("u64", "INT2"))?;
             buf.extend_from_slice(&2_i32.to_be_bytes());
             buf.extend_from_slice(&v16.to_be_bytes());
         }
         oid::INT4 => {
-            let v32 =
-                i32::try_from(v).map_err(|_| zero_postgres::Error::overflow("u64", "INT4"))?;
+            let v32 = i32::try_from(v)
+                .map_err(|_unhelpful_err| zero_postgres::Error::overflow("u64", "INT4"))?;
             buf.extend_from_slice(&4_i32.to_be_bytes());
             buf.extend_from_slice(&v32.to_be_bytes());
         }
         oid::INT8 | 0 => {
             // INT8 or unknown (0) - convert to i64
-            let v64 =
-                i64::try_from(v).map_err(|_| zero_postgres::Error::overflow("u64", "INT8"))?;
+            let v64 = i64::try_from(v)
+                .map_err(|_unhelpful_err| zero_postgres::Error::overflow("u64", "INT8"))?;
             buf.extend_from_slice(&8_i32.to_be_bytes());
             buf.extend_from_slice(&v64.to_be_bytes());
         }
@@ -350,12 +350,13 @@ fn encode_decimal(s: &str, target_oid: Oid, buf: &mut Vec<u8>) -> zero_postgres:
 }
 
 /// PostgreSQL epoch (2000-01-01)
-const PG_EPOCH: Date = Date::from_calendar_date(2000, Month::January, 1).unwrap();
+const PG_EPOCH: Date = time::macros::datetime!(2000-01-01 00:00:00).date();
 
 /// Convert (year, month, day) to days since `PostgreSQL` epoch (2000-01-01)
 fn days_since_pg_epoch(year: i32, month: u8, day: u8) -> zero_postgres::Result<i32> {
-    let month = Month::try_from(month)
-        .map_err(|_| zero_postgres::Error::InvalidUsage(format!("invalid month: {month}")))?;
+    let month = Month::try_from(month).map_err(|_unhelpful_err| {
+        zero_postgres::Error::InvalidUsage(format!("invalid month: {month}"))
+    })?;
     let date = Date::from_calendar_date(year, month, day)
         .map_err(|e| zero_postgres::Error::InvalidUsage(format!("invalid date: {e}")))?;
     Ok(date.to_julian_day() - PG_EPOCH.to_julian_day())

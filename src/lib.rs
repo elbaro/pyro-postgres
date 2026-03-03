@@ -1,4 +1,10 @@
 #![allow(async_fn_in_trait)]
+#![warn(
+    clippy::expect_used,
+    clippy::get_unwrap,
+    clippy::unwrap_in_result,
+    clippy::unwrap_used
+)]
 
 pub mod r#async;
 pub mod error;
@@ -90,6 +96,9 @@ mod pyro_postgres {
 
         #[pymodule_export]
         use error_types::PythonObjectCreationError;
+
+        #[pymodule_export]
+        use error_types::LibraryBugError;
     }
 
     #[pymodule]

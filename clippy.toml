@@ -1,4 +1,2 @@
-allow-expect-in-tests = true
 allow-unwrap-in-consts = true
-allow-unwrap-in-tests = true
 doc-valid-idents = ["PostgreSQL"]
