@@ -7,7 +7,7 @@ use zero_postgres::Ticket;
 ///
 /// The Ticket lifetime is transmuted to 'static because the Pipeline
 /// stores `Py<PreparedStatement>` objects that keep the PreparedStatements alive.
-#[pyclass(module = "pyro_postgres", name = "Ticket", frozen)]
+#[pyclass(module = "pyro_postgres", name = "Ticket", frozen, from_py_object)]
 #[derive(Clone, Copy)]
 pub struct PyTicket {
     pub(crate) inner: Ticket<'static>,

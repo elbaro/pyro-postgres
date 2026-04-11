@@ -9,7 +9,7 @@ use crate::py_imports::get_json_module;
 
 /// Python wrapper for JSON data.
 /// Use this to explicitly send data as JSON type.
-#[pyclass(name = "Json")]
+#[pyclass(name = "Json", from_py_object)]
 #[derive(Clone)]
 pub struct PyJson {
     pub data: String,
@@ -40,7 +40,7 @@ impl PyJson {
 
 /// Python wrapper for JSONB data.
 /// Use this to explicitly send data as JSONB type.
-#[pyclass(name = "Jsonb")]
+#[pyclass(name = "Jsonb", from_py_object)]
 #[derive(Clone)]
 pub struct PyJsonb {
     pub data: String,

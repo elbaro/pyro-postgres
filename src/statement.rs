@@ -14,7 +14,12 @@ use zero_postgres::state::extended::PreparedStatement as ZeroPreparedStatement;
 ///     p.claim_drop(t1)
 ///     p.claim_drop(t2)
 /// ```
-#[pyclass(module = "pyro_postgres", name = "PreparedStatement", frozen)]
+#[pyclass(
+    module = "pyro_postgres",
+    name = "PreparedStatement",
+    frozen,
+    from_py_object
+)]
 #[derive(Clone)]
 pub struct PreparedStatement {
     pub inner: ZeroPreparedStatement,

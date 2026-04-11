@@ -16,7 +16,7 @@ use crate::error::{Error, PyroResult};
 /// # Or build manually
 /// opts = Opts().host("localhost").port(5432).user("postgres").password("secret").db("mydb")
 /// ```
-#[pyclass(module = "pyro_postgres", name = "Opts")]
+#[pyclass(module = "pyro_postgres", name = "Opts", from_py_object)]
 #[derive(Clone, Debug, Default)]
 pub struct Opts {
     pub inner: zero_postgres::Opts,
