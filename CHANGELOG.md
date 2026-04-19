@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0](https://github.com/elbaro/pyro-postgres/compare/v0.3.2...v0.4.0) (2026-04-19)
+
+
+### ⚠ BREAKING CHANGES
+
+* update actions/upload-pages-artifact action to v5 ([#20](https://github.com/elbaro/pyro-postgres/issues/20))
+* update breaking dependencies ([#14](https://github.com/elbaro/pyro-postgres/issues/14))
+
+* update actions/upload-pages-artifact action to v5 ([#20](https://github.com/elbaro/pyro-postgres/issues/20)) ([3747dd3](https://github.com/elbaro/pyro-postgres/commit/3747dd38dda2b28a75a4ce9d7da040fae8fdb13a))
+* update breaking dependencies ([#14](https://github.com/elbaro/pyro-postgres/issues/14)) ([94386ef](https://github.com/elbaro/pyro-postgres/commit/94386efa86153a05835ade58bd21890bd317eeea))
+
 ## [0.3.2](https://github.com/elbaro/pyro-postgres/compare/v0.3.1...v0.3.2) (2026-03-03)
 
 
