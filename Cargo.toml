@@ -2,6 +2,7 @@
 name = "pyro_postgres"
 version = "0.3.2"
 edition = "2024"
+license = "MIT"
 publish = false
 
 [lib]
