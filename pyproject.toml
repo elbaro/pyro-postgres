@@ -4,6 +4,8 @@ build-backend = "maturin"
 
 [project]
 name = "pyro-postgres"
+license = "BlueOak-1.0.0"
+license-files = ["LICENSE.md"]
 requires-python = ">=3.10"
 dynamic = ["version"]
 dependencies = ["typing_extensions"]
