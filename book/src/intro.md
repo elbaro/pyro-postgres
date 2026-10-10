@@ -46,7 +46,7 @@ pyro-postgres is built on [zero-postgres](https://crates.io/crates/zero-postgres
 
 ## Limitations
 
-- **Python 3.10+**: Requires Python 3.10 or later
+- **Python 3.11+**: Requires Python 3.11 or later
 - **PostgreSQL 18**: Supports PostgresSQL 18 or later
 - **Limited Type Coverage**: Not all PostgreSQL types are supported yet
 - **Limited Performance Gain in Async API**: Due to the overhead of Python 3.14 Free-threading, the async module pays a significant cost switching between Python thread and Rust thread. Upon receiving the network packet, the Rust thread needs to attach to GIL to construct objects like PyList/PyInt/PyString and detach soon after. It was observed in one of the benchmarks that more than 30% time is spent on the destruction of `GILState` c struct. To avoid this, we accumulate the received row data in the Rust buffer and convert to Python at once. The async performance has a potential to be much faster than now with the advance of single-threaded overhead of Python Free-threading.
