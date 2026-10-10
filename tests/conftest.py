@@ -1,5 +1,6 @@
 import logging
 import os
+from urllib.parse import SplitResult, urlsplit
 
 import pytest
 from pyro_postgres import Opts
@@ -8,6 +9,11 @@ from pyro_postgres import Opts
 def get_test_db_url() -> str:
     """Get the test database URL from environment or default."""
     return os.environ.get("DATABASE_URL", "postgresql://test:1234@localhost:5432/test")
+
+
+def get_test_db_url_parts() -> SplitResult:
+    """Get the test database URL split into host, port, user, password, and path."""
+    return urlsplit(get_test_db_url())
 
 
 def get_async_opts() -> Opts:

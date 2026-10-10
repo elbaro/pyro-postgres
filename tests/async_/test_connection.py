@@ -6,7 +6,7 @@ from pyro_postgres import Opts
 from pyro_postgres.async_ import Conn
 from pyro_postgres.error import ConnectionClosedError, IncorrectApiUsageError
 
-from ..conftest import get_test_db_url
+from ..conftest import get_test_db_url, get_test_db_url_parts
 
 
 class TestAsyncConnection:
@@ -125,8 +125,14 @@ class TestAsyncOpts:
     @pytest.mark.asyncio
     async def test_opts_builder_chain(self):
         """Test Opts builder pattern with chaining for async connection."""
+        url = get_test_db_url_parts()
         opts = (
-            Opts().host("localhost").port(5432).user("test").password("1234").db("test")
+            Opts()
+            .host(url.hostname or "localhost")
+            .port(url.port or 5432)
+            .user(url.username or "")
+            .password(url.password or "")
+            .db(url.path.lstrip("/"))
         )
         conn = await Conn.new(opts)
         result = await conn.query_first("SELECT 1")
