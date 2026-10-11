@@ -4,11 +4,36 @@ build-backend = "maturin"
 
 [project]
 name = "pyro-postgres"
+description = "High-performance PostgreSQL driver for Python"
+readme = "README.md"
 license = "BlueOak-1.0.0"
 license-files = ["LICENSE.md"]
-requires-python = ">=3.11"
+keywords = ["postgres", "postgresql", "async", "asyncio", "database", "rust", "pyo3"]
 dynamic = ["version"]
+requires-python = ">=3.11"
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Programming Language :: Python :: Free Threading :: 1 - Unstable",
+  "Programming Language :: Rust",
+  "Topic :: Database",
+  "Topic :: Database :: Front-Ends",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Framework :: AsyncIO",
+  "Typing :: Typed",
+]
 dependencies = ["typing_extensions"]
+
+[project.urls]
+Repository = "https://github.com/elbaro/pyro-postgres"
+Documentation = "https://elbaro.github.io/pyro-postgres/"
 
 [tool.maturin]
 features = ["pyo3/extension-module"]
